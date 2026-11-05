@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: vggos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vggos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: vggos
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - vggos_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vggos -d vggos"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  vggos_pg:
