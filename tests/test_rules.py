@@ -58,10 +58,16 @@ def test_month_slices_cover_the_range():
 
 def test_sample_and_odata_urls_are_refused():
     with pytest.raises(ConfigError):
-        resolve_api_root("http://10.250.50.9:7148/BCTEST/ODataV4/")
+        resolve_api_root("http://10.250.50.9:7148/BC230/api/vgg/integration/v1.0")
     with pytest.raises(ConfigError):
         resolve_api_root("https://bc.example.test/BC230/ODataV4")
+    with pytest.raises(ConfigError):
+        resolve_api_root("https://bc-host.example.local:7048/BC230")
     assert resolve_api_root("https://bc.example.test/BC230") == "https://bc.example.test/BC230/api/vgg/finance/v1.0"
+    assert (
+        resolve_api_root("https://10.250.50.9:7149/BC230", "/api/vgg/integration/v1.0")
+        == "https://10.250.50.9:7149/BC230/api/vgg/integration/v1.0"
+    )
 
 
 def test_merge_does_not_invent_zero():

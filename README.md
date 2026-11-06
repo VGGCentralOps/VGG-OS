@@ -22,13 +22,14 @@ While appraisal sign-in is being repaired, one local database account works on t
 Do not put the access key in this folder or in the browser. When Elijah provides the live HTTPS base URL, the auth method, the user name, and the access key, put them in the secrets file:
 
 ```text
-VGGOS_BC_BASE_URL=https://host:port/instance
+VGGOS_BC_BASE_URL=https://host:port/BC230
+VGGOS_BC_API_ROUTE=
 VGGOS_BC_AUTH_METHOD=basic
 VGGOS_BC_USERNAME=
 VGGOS_BC_ACCESS_KEY=
 ```
 
-The base URL must be HTTPS and must not be an `/ODataV4/` address. The service appends `/api/vgg/finance/v1.0` itself. It then reads companies and continues only if Advancly id `74c0cf04-6359-ef11-a85a-7c1e52340759` is in the list. The posting-date range and the reconciliation month are entered on the Books screen. They are not guessed.
+The base URL must be HTTPS and must not be an `/ODataV4/` address. Leave `VGGOS_BC_API_ROUTE` blank to use `/api/vgg/finance/v1.0`. Set it to `/api/vgg/integration/v1.0` only if Elijah confirms that is the published route. The service reads companies and continues only if Advancly id `74c0cf04-6359-ef11-a85a-7c1e52340759` is in the list. The posting-date range and the reconciliation month are entered on the Books screen. They are not guessed.
 
 `/health` reports whether the database is up and whether Business Central is configured. It does not return the secret.
 

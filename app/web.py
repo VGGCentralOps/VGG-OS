@@ -7,8 +7,9 @@ import io
 import logging
 import threading
 from datetime import date
+from pathlib import Path
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -39,6 +40,22 @@ from app.sample_preview import bank_rows as sample_bank_rows
 from app.sample_preview import sync_runs as sample_sync_runs
 from app.sample_preview import trial_rows as sample_trial_rows
 from app.rate_limit import RateLimiter
+from app.repository import (
+    MAX_BYTES,
+    add_file,
+    add_folder,
+    breadcrumbs,
+    children,
+    clean_name,
+    content_disposition,
+    delete_node,
+    extension_mime,
+    file_payload,
+    folder_node,
+    message_for,
+    parse_node_id,
+    size_label,
+)
 from app.redact import ScrubFilter
 from app.session_request import end_session, resolve_session
 from app.session_store import SessionView
@@ -295,6 +312,151 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         with db() as conn:
             catalogue = report_catalogue(conn)
         return page(request, session, "reports.html", reports=catalogue)
+
+    def repository_location(parent, error: str = "") -> str:
+        base = "/repositories" if parent is None else f"/repositories/{parent}"
+        if error:
+            return f"{base}?error={error}"
+        return base
+
+    def repository_screen(request: Request, session: SessionView, node_id: str | None):
+        with db() as conn:
+            folder = None
+            if node_id is not None:
+                parsed = parse_node_id(node_id)
+                folder = folder_node(conn, parsed) if parsed is not None else None
+                if folder is None:
+                    return RedirectResponse("/repositories", status_code=303)
+            parent = None if folder is None else folder["id"]
+            crumbs = [] if parent is None else breadcrumbs(conn, parent)
+            nodes = [
+                {**node, "size_label": size_label(node["size_bytes"])}
+                for node in children(conn, parent)
+            ]
+        return page(
+            request,
+            session,
+            "repositories.html",
+            folder=folder,
+            crumbs=crumbs,
+            nodes=nodes,
+            notice=message_for(request.query_params.get("error")),
+        )
+
+    @app.get("/repositories", response_class=HTMLResponse)
+    def repositories(request: Request):
+        session = guard(request, "books:read")
+        if not isinstance(session, SessionView):
+            return session
+        return repository_screen(request, session, None)
+
+    @app.get("/repositories/{node_id}", response_class=HTMLResponse)
+    def repository_folder(request: Request, node_id: str):
+        session = guard(request, "books:read")
+        if not isinstance(session, SessionView):
+            return session
+        return repository_screen(request, session, node_id)
+
+    @app.get("/repositories/{node_id}/file")
+    def repository_file(request: Request, node_id: str):
+        session = guard(request, "books:read")
+        if not isinstance(session, SessionView):
+            return session
+        parsed = parse_node_id(node_id)
+        if parsed is None:
+            return Response("Not found", status_code=404)
+        with db() as conn:
+            payload = file_payload(conn, parsed)
+        if payload is None:
+            return Response("Not found", status_code=404)
+        return Response(
+            bytes(payload["content"]),
+            media_type=payload["mime"] or "application/octet-stream",
+            headers={
+                "Content-Disposition": content_disposition(payload["name"]),
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
+    @app.post("/repositories/upload")
+    async def repository_upload(
+        request: Request,
+        csrf_token: str = Form(""),
+        parent_id: str = Form(""),
+        upload: UploadFile | None = File(None),
+    ):
+        session = guard(request, "books:read")
+        if not isinstance(session, SessionView):
+            return session
+        parent = None
+        if parent_id.strip():
+            parent = parse_node_id(parent_id)
+            if parent is None:
+                return RedirectResponse("/repositories?error=folder", status_code=303)
+        if not same(csrf_token, session.csrf):
+            return RedirectResponse(repository_location(parent), status_code=303)
+        filename = upload.filename if upload is not None else ""
+        name = clean_name(Path(filename or "").name)
+        if name is None:
+            return RedirectResponse(repository_location(parent, "name"), status_code=303)
+        if extension_mime(name) is None:
+            return RedirectResponse(repository_location(parent, "type"), status_code=303)
+        content = b""
+        total = 0
+        too_large = False
+        if upload is not None:
+            while True:
+                block = await upload.read(1024 * 1024)
+                if not block:
+                    break
+                total += len(block)
+                if total > MAX_BYTES:
+                    too_large = True
+                    break
+                content += block
+        if too_large:
+            return RedirectResponse(repository_location(parent, "size"), status_code=303)
+        if not content:
+            return RedirectResponse(repository_location(parent, "empty"), status_code=303)
+        with db() as conn:
+            code = add_file(conn, parent, name, content, session.principal_id)
+        return RedirectResponse(repository_location(parent, code), status_code=303)
+
+    @app.post("/repositories/folder")
+    def repository_new_folder(
+        request: Request,
+        csrf_token: str = Form(""),
+        parent_id: str = Form(""),
+        name: str = Form(""),
+    ):
+        session = guard(request, "books:read")
+        if not isinstance(session, SessionView):
+            return session
+        parent = None
+        if parent_id.strip():
+            parent = parse_node_id(parent_id)
+            if parent is None:
+                return RedirectResponse("/repositories?error=folder", status_code=303)
+        if not same(csrf_token, session.csrf):
+            return RedirectResponse(repository_location(parent), status_code=303)
+        with db() as conn:
+            code = add_folder(conn, parent, name, session.principal_id)
+        return RedirectResponse(repository_location(parent, code), status_code=303)
+
+    @app.post("/repositories/{node_id}/delete")
+    def repository_delete(request: Request, node_id: str, csrf_token: str = Form("")):
+        session = guard(request, "books:read")
+        if not isinstance(session, SessionView):
+            return session
+        parsed = parse_node_id(node_id)
+        if parsed is None or not same(csrf_token, session.csrf):
+            return RedirectResponse("/repositories", status_code=303)
+        with db() as conn:
+            code, parent = delete_node(conn, parsed, session.principal_id)
+        if code:
+            return RedirectResponse("/repositories?error=folder", status_code=303)
+        return RedirectResponse(repository_location(parent), status_code=303)
 
     @app.post("/sync")
     def start_sync(

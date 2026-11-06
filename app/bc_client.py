@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import httpx
 
 from app.bc_url import ConfigError, resolve_api_root
+from app.constants import API_ROUTE
 from app.money import parse_json_exact
 
 
@@ -19,8 +20,15 @@ class BcError(Exception):
 
 
 class BcClient:
-    def __init__(self, base_url: str, username: str, access_key: str, transport: httpx.BaseTransport | None = None):
-        self.api_root = resolve_api_root(base_url)
+    def __init__(
+        self,
+        base_url: str,
+        username: str,
+        access_key: str,
+        transport: httpx.BaseTransport | None = None,
+        api_route: str = API_ROUTE,
+    ):
+        self.api_root = resolve_api_root(base_url, api_route)
         self._username = username
         self._access_key = access_key
         self._client = httpx.Client(transport=transport, timeout=httpx.Timeout(120.0), follow_redirects=False)

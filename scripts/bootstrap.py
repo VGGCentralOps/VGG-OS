@@ -40,6 +40,7 @@ def main() -> None:
     values.setdefault("VGG_AUTH_ANON_KEY", "")
     values.setdefault("VGGOS_DEV_USERNAME", "developer")
     values.setdefault("VGGOS_BC_BASE_URL", "")
+    values.setdefault("VGGOS_BC_API_ROUTE", "")
     values.setdefault("VGGOS_BC_AUTH_METHOD", "")
     values.setdefault("VGGOS_BC_USERNAME", "")
     values.setdefault("VGGOS_BC_ACCESS_KEY", "")
@@ -111,6 +112,8 @@ def apply_migrations(name: str) -> None:
         psql(name, "/tmp/vggos-migrate/003_appraisal_iam.sql")
     if "004_temp_db_login" not in applied:
         psql(name, "/tmp/vggos-migrate/004_temp_db_login.sql")
+    if "005_repository" not in applied:
+        psql(name, "/tmp/vggos-migrate/005_repository.sql")
     output = psql(name, "/tmp/vggos-pack/tests/001_regression.sql")
     if "FAILED:" in output:
         raise SystemExit(output)

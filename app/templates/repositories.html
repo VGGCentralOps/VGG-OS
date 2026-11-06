@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Repositories · VGG OS{% endblock %}
+{% block body %}
+<header class="page-header">
+  <div class="page-title">
+    <span class="tick" aria-hidden="true"></span>
+    <div>
+      <h1>Repositories</h1>
+      <p>The finance files Finance supplied, in the same folders. These are prepared files, not a Business Central extract. Open a folder, add a file in it, or delete one.</p>
+    </div>
+  </div>
+</header>
+
+<nav class="crumbs" aria-label="Folder">
+  {% if folder %}
+  <a href="/repositories">Repositories</a>
+  {% else %}
+  <span>Repositories</span>
+  {% endif %}
+  {% for crumb in crumbs %}
+    {% if loop.last %}
+    <span aria-hidden="true">/</span> <span>{{ crumb.name }}</span>
+    {% else %}
+    <span aria-hidden="true">/</span> <a href="/repositories/{{ crumb.id }}">{{ crumb.name }}</a>
+    {% endif %}
+  {% endfor %}
+</nav>
+
+{% if notice %}
+<section class="callout"><p>{{ notice }}</p></section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <h2>{% if folder %}{{ folder.name }}{% else %}All folders{% endif %}</h2>
+    <p>{{ nodes|length }} item{% if nodes|length != 1 %}s{% endif %} in this folder.</p>
+  </div>
+  <div class="section-body flush">
+    {% if nodes %}
+    <table class="stack">
+      <thead>
+        <tr><th>Name</th><th>Kind</th><th>Size</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for node in nodes %}
+        <tr>
+          <td data-label="Name">
+            {% if node.kind == 'folder' %}
+            <a href="/repositories/{{ node.id }}">{{ node.name }}</a>
+            {% else %}
+            <a href="/repositories/{{ node.id }}/file">{{ node.name }}</a>
+            {% endif %}
+          </td>
+          <td data-label="Kind">{{ "Folder" if node.kind == "folder" else "File" }}</td>
+          <td data-label="Size">{{ node.size_label or "—" }}</td>
+          <td data-label="Remove">
+            <form method="post" action="/repositories/{{ node.id }}/delete" onsubmit="return confirm('{% if node.kind == 'folder' %}Delete this folder and everything inside it?{% else %}Delete this file?{% endif %}')">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <button type="submit" class="btn btn-secondary btn-small">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="section-body">
+      <p class="empty">This folder is empty. Add a file below.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Add a file here</h2>
+    <p>Excel, PowerPoint, Word, PDF, CSV, or an image. Up to 50 MB.</p>
+  </div>
+  <div class="section-body">
+    <form method="post" action="/repositories/upload" enctype="multipart/form-data" class="file-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
+      <label>File<input type="file" name="upload" required></label>
+      <button type="submit" class="btn btn-primary">Add file</button>
+    </form>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>New folder</h2>
+    <p>Creates a folder in the one you have open.</p>
+  </div>
+  <div class="section-body">
+    <form method="post" action="/repositories/folder" class="file-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
+      <label>Name<input type="text" name="name" maxlength="240" required></label>
+      <button type="submit" class="btn btn-secondary">Create folder</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

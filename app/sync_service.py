@@ -79,9 +79,10 @@ def scope_hash(scope: dict) -> str:
 def instance_code(api_root: str) -> str:
     parsed = urlparse(api_root)
     prefix = parsed.path
-    marker = "/api/vgg/finance/v1.0"
-    if prefix.endswith(marker):
-        prefix = prefix[: -len(marker)]
+    marker = "/api/vgg/"
+    found = prefix.lower().find(marker)
+    if found >= 0:
+        prefix = prefix[:found]
     label = f"{(parsed.hostname or '').lower()}:{parsed.port or 443}{prefix.lower()}"
     digest = hashlib.sha256(label.encode("utf-8")).hexdigest()[:12]
     safe = re.sub(r"[^a-z0-9]+", "-", label).strip("-")[:40]
@@ -159,6 +160,7 @@ class SyncService:
                 self.settings.bc_username,
                 self.settings.bc_access_key,
                 transport=self.transport,
+                api_route=self.settings.bc_api_route,
             )
             conn = connect(self.settings.database_url)
             conn.autocommit = True
@@ -1013,7 +1015,7 @@ class SyncService:
                 """,
                 (
                     system["id"], code, api_root, self.settings.bc_secret_reference,
-                    "HTTPS custom API /api/vgg/finance/v1.0. Do not append that route to /ODataV4/.",
+                    "HTTPS custom API. Do not append that route to /ODataV4/.",
                 ),
             ).fetchone()
         return row

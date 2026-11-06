@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.bc_url import ConfigError, resolve_api_root
+from app.bc_url import ConfigError, normalise_api_route, resolve_api_root
 from app.constants import SECRET_REFERENCE
 from app.iam_config import AUTH_BASE, require_anon_key
 
@@ -35,6 +35,7 @@ class Settings:
     dev_password: str
     session_secret: str
     bc_base_url: str
+    bc_api_route: str
     bc_auth_method: str
     bc_username: str
     bc_access_key: str
@@ -65,10 +66,14 @@ class Settings:
     def connection_blockers(self) -> list[str]:
         blockers = []
         if not self.bc_base_url:
-            blockers.append("HTTPS base URL from Elijah. The guide's HTTP ODataV4 sample is not used.")
+            blockers.append("HTTPS base URL from Elijah. The HTTP address opened in the browser is not used.")
+            try:
+                normalise_api_route(self.bc_api_route)
+            except ConfigError as exc:
+                blockers.append(str(exc))
         else:
             try:
-                resolve_api_root(self.bc_base_url)
+                resolve_api_root(self.bc_base_url, self.bc_api_route)
             except ConfigError as exc:
                 blockers.append(str(exc))
         if not self.bc_auth_method:
@@ -89,7 +94,7 @@ class Settings:
         blockers = self.connection_blockers()
         if blockers:
             raise ConfigError("Business Central is not being called. " + " ".join(blockers))
-        return resolve_api_root(self.bc_base_url)
+        return resolve_api_root(self.bc_base_url, self.bc_api_route)
 
 
 def _enabled(value: str) -> bool:
@@ -112,6 +117,7 @@ def load_settings() -> Settings:
         dev_password=pick("VGGOS_DEV_PASSWORD"),
         session_secret=pick("VGGOS_SESSION_SECRET"),
         bc_base_url=pick("VGGOS_BC_BASE_URL"),
+        bc_api_route=pick("VGGOS_BC_API_ROUTE"),
         bc_auth_method=pick("VGGOS_BC_AUTH_METHOD"),
         bc_username=pick("VGGOS_BC_USERNAME"),
         bc_access_key=pick("VGGOS_BC_ACCESS_KEY"),
