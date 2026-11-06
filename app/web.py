@@ -155,7 +155,9 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         )
         clear_stale_csrf_cookie(response)
         response.headers["Cache-Control"] = "no-store"
-        response.headers["Referrer-Policy"] = "no-referrer"
+        # Chrome sends Origin: null on a form post when this is no-referrer,
+        # and sign-in rejects that before it reads the password.
+        response.headers["Referrer-Policy"] = "same-origin"
         return response
 
     def page(request: Request, session: SessionView, name: str, **context):

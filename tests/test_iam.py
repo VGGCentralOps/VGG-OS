@@ -363,6 +363,7 @@ def test_sign_in_form_works_without_the_csrf_cookie():
     with appraisal_app(SUBJECT, NO_GRANT_EMAIL, seed=False) as (client, fake, *_rest):
         fake.reject_password = True
         page = client.get("/login")
+        assert page.headers["referrer-policy"] == "same-origin"
         token = csrf_from(page.text)
         bare = TestClient(client.app, base_url="http://localhost:8096")
         response = bare.post(
@@ -383,6 +384,16 @@ def test_sign_in_form_works_without_the_csrf_cookie():
         )
         assert forged.status_code == 403
         assert "Reload the sign-in page" in forged.text
+        assert fake.password_attempts == 1
+        remote = TestClient(client.app, base_url="https://vgg-os.onrender.com")
+        blocked = remote.post(
+            "/api/session",
+            data={"email": NO_GRANT_EMAIL, "password": "correct-horse", "csrf_token": token},
+            headers={"Origin": "null"},
+            follow_redirects=False,
+        )
+        assert blocked.status_code == 403
+        assert "Reload the sign-in page" in blocked.text
         assert fake.password_attempts == 1
 
 
