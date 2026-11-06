@@ -27,20 +27,15 @@ from app.queries import (
     dormancy_rule,
     latest_probe,
     loaded_months,
-    notices,
     open_task_count,
     open_tasks,
-    pending_report_count,
     register_rows,
-    report_catalogue,
     sync_runs,
     trial_balance,
 )
-from app.sample_preview import bank_rows as sample_bank_rows
-from app.sample_preview import sync_runs as sample_sync_runs
-from app.sample_preview import trial_rows as sample_trial_rows
 from app.rate_limit import RateLimiter
 from app.repository import (
+    file_count,
     MAX_BYTES,
     add_file,
     add_folder,
@@ -121,6 +116,13 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
     install_scrub()
     app = FastAPI(title="VGG OS", docs_url=None, redoc_url=None)
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
+
+    @app.middleware("http")
+    async def cache_static(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=86400"
+        return response
     app.state.settings = current
     app.state.appraisal = appraisal or default_client(current.auth_url, current.auth_anon_key)
     app.state.jwks = jwks or JwksCache()
@@ -275,11 +277,7 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 "run_count": len(sync_runs(conn)),
                 "bank_count": advancly_bank_count(conn),
                 "task_count": open_task_count(conn),
-                "pending_reports": pending_report_count(conn),
-                "blockers": current.connection_blockers(),
-                "expected_id": ADVANCLY_COMPANY_ID,
-                "expected_name": ADVANCLY_WORKBOOK_NAME,
-                "secret_reference": current.bc_secret_reference,
+                "file_count": file_count(conn),
             }
         return page(request, session, "overview.html", **payload)
 
@@ -292,9 +290,7 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             runs = sync_runs(conn)
             payload = {
                 "runs": runs,
-                "sample_runs": sample_sync_runs() if not runs else [],
                 "probe": latest_probe(conn),
-                "notes": notices(conn),
                 "blockers": current.connection_blockers(),
                 "expected_id": ADVANCLY_COMPANY_ID,
                 "expected_name": ADVANCLY_WORKBOOK_NAME,
@@ -304,14 +300,12 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             }
         return page(request, session, "books.html", **payload)
 
-    @app.get("/reports", response_class=HTMLResponse)
+    @app.get("/reports")
     def reports(request: Request):
         session = guard(request, "books:read")
         if not isinstance(session, SessionView):
             return session
-        with db() as conn:
-            catalogue = report_catalogue(conn)
-        return page(request, session, "reports.html", reports=catalogue)
+        return RedirectResponse("/repositories", status_code=303)
 
     def repository_location(parent, error: str = "") -> str:
         base = "/repositories" if parent is None else f"/repositories/{parent}"
@@ -534,7 +528,6 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             report=report,
             year=year,
             month=month,
-            sample_rows=sample_trial_rows() if not months else [],
         )
 
     @app.get("/trial-balance.csv")
@@ -572,7 +565,6 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             rows=rows,
             grouped=grouped,
             rule=rule,
-            sample_rows=sample_bank_rows() if not rows else [],
         )
 
     @app.get("/bank-accounts.csv")

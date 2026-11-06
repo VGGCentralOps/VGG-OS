@@ -7,13 +7,13 @@
     <span class="tick" aria-hidden="true"></span>
     <div>
       <h1>Trial balance</h1>
-      <p>Local figures are the sum of loaded general-ledger amounts for one company. The first company is Advancly Technologies NIG Ltd. The control column is Business Central glBalancesByPeriod. This is not a profit and loss and not a group pack.</p>
+      <p>One company, one month.</p>
     </div>
   </div>
 </header>
 
 <section class="section">
-  <div class="section-head"><h2>Month</h2><p>A missing figure stays missing.</p></div>
+  <div class="section-head"><h2>Month</h2></div>
   <div class="section-body">
     <form method="get" action="/trial-balance" class="fields">
       <label>Year <input name="year" value="{{ year or '' }}" inputmode="numeric" required></label>
@@ -25,7 +25,7 @@
       {% for y, m in months %}<a href="/trial-balance?year={{ y }}&month={{ m }}">{{ y }}-{{ '%02d'|format(m) }}</a> {% endfor %}
     </p>
     {% else %}
-    <p class="empty">No month has been loaded. The trial balance is unavailable. It is not shown as zero.</p>
+    <p class="empty">No month has been loaded.</p>
     {% endif %}
   </div>
 </section>
@@ -97,32 +97,5 @@
   </div>
 </section>
 {% endif %}
-{% elif not months %}
-<section class="section">
-  <div class="section-head">
-    <h2>Sample month</h2>
-    <p>Layout only. A missing figure is not shown as zero. These amounts are not stored and are not from Business Central.</p>
-  </div>
-  <div class="section-body flush">
-    <table class="stack">
-      <thead>
-        <tr><th>Account</th><th>Name</th><th>Local net</th><th>Business Central net</th><th>Difference</th><th>Local lines</th><th>BC entries</th></tr>
-      </thead>
-      <tbody>
-        {% for row in sample_rows %}
-        <tr>
-          <td data-label="Account" class="mono">{{ row.code }}</td>
-          <td data-label="Name">{{ row.name }} {{ chip('review', 'Sample') }}</td>
-          <td data-label="Local net" class="num">{{ row.local_text }}</td>
-          <td data-label="Business Central net" class="num {% if row.bc_amount is none %}missing{% endif %}">{{ row.bc_text }}</td>
-          <td data-label="Difference" class="num {% if row.difference is none %}missing{% endif %}">{{ row.difference_text }}</td>
-          <td data-label="Local lines" class="num">{{ row.local_count }}</td>
-          <td data-label="BC entries" class="num">{{ row.bc_count if row.bc_count is not none else "Missing" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
 {% endif %}
 {% endblock %}

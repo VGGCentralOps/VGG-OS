@@ -32,15 +32,18 @@ def test_pages_require_a_session_and_do_not_invent_figures():
     with signed_in_client() as (signed, _fake, _settings, _access, _refresh):
         books = signed.get("/")
         assert books.status_code == 200
-        assert "has not been called" in books.text
+        assert "Elijah" not in books.text
+        assert 'href="/reports"' not in books.text
+        assert "Repositories" in books.text
         assert "10.250.50.9" not in books.text
         trial = signed.get("/trial-balance")
-        assert "not shown as zero" in trial.text
+        assert "No month has been loaded" in trial.text
         banks = signed.get("/bank-accounts")
         assert "No bank accounts are loaded" in banks.text
-        assert "starting with Advancly" in banks.text
         assert "No account is flagged dormant" in banks.text
-        assert "None. No bank feed is connected." in banks.text
+        reports = signed.get("/reports", follow_redirects=False)
+        assert reports.status_code == 303
+        assert reports.headers["location"] == "/repositories"
         closed = signed.post("/bank-feeds/mono/pull")
         assert closed.status_code == 423
         assert "No balance is stored" in closed.text

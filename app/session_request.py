@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -25,6 +26,25 @@ from app.temp_login import ALL_SCOPES, is_temp_token
 log = logging.getLogger("vggos")
 _LOCKS: dict[str, threading.Lock] = {}
 _LOCKS_GUARD = threading.Lock()
+_SESSION_CACHE: dict[str, tuple[float, "Resolved"]] = {}
+_CACHE_SECONDS = 30.0
+
+
+def _cached(cookie: str) -> "Resolved | None":
+    item = _SESSION_CACHE.get(cookie)
+    if item is None or item[0] <= time.monotonic():
+        _SESSION_CACHE.pop(cookie, None)
+        return None
+    return item[1]
+
+
+def _remember(cookie: str, found: "Resolved") -> None:
+    if found.session is not None:
+        _SESSION_CACHE[cookie] = (time.monotonic() + _CACHE_SECONDS, found)
+
+
+def forget_session(cookie: str) -> None:
+    _SESSION_CACHE.pop(cookie or "", None)
 
 
 @dataclass
@@ -59,19 +79,28 @@ def _drop(conn, session_id: str, message: str) -> Resolved:
 def resolve_session(cookie: str, settings, appraisal, jwks, db) -> Resolved:
     if not cookie:
         return Resolved()
+    remembered = _cached(cookie)
+    if remembered is not None:
+        return remembered
     key = key_bytes(settings.token_key)
     if key is None:
         return Resolved(clear_cookie=True)
     with _lock_for(cookie):
+        remembered = _cached(cookie)
+        if remembered is not None:
+            return remembered
         try:
             with db() as conn:
                 row = load_session_row(conn, cookie)
                 if row is None or not row["active"] or session_expired(row):
+                    forget_session(cookie)
                     return _drop(conn, cookie, "OS session ended.")
                 if _temporary_session(key, row):
                     view = session_view(row, ALL_SCOPES)
                     conn.commit()
-                    return Resolved(session=view)
+                    found = Resolved(session=view)
+                    _remember(cookie, found)
+                    return found
                 if access_needs_refresh(row):
                     try:
                         refresh_token = unseal(key, row["id"], row["refresh_ciphertext"])
@@ -94,6 +123,7 @@ def resolve_session(cookie: str, settings, appraisal, jwks, db) -> Resolved:
 
 
 def end_session(cookie: str, settings, appraisal, db) -> None:
+    forget_session(cookie)
     if not cookie:
         return
     key = key_bytes(settings.token_key)

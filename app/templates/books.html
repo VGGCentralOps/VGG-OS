@@ -7,37 +7,27 @@
     <span class="tick" aria-hidden="true"></span>
     <div>
       <h1>Books</h1>
-      <p>Read-only loads for the group. The first company is {{ expected_name }}. A failed run leaves the last checkpoint in place.</p>
+      <p>Ledger sync for {{ expected_name }}.</p>
     </div>
   </div>
 </header>
 
+{% if not blockers %}
 <section class="section">
-  <div class="section-head">
-    <h2>Connection</h2>
-    <p>First company id {{ expected_id }}. If that id is absent, the sync stops and lists the companies it did see. Another company is not substituted.</p>
-  </div>
+  <div class="section-head"><h2>Sync</h2></div>
   <div class="section-body">
-    <p>Secret reference <code>{{ secret_reference }}</code>. The access key stays in the server secret file.</p>
-    {% if blockers %}
-    <div class="banner-wait">
-      <p>Business Central has not been called.</p>
-      <ul>{% for item in blockers %}<li>{{ item }}</li>{% endfor %}</ul>
-    </div>
-    {% else %}
     <form method="post" action="/sync" class="fields">
       <input type="hidden" name="csrf_token" value="{{ csrf }}">
       <label>Posting date from <input type="date" name="date_from" required></label>
       <label>Posting date to <input type="date" name="date_to" required></label>
       <label>Reconciliation year <input name="year" inputmode="numeric" required placeholder="YYYY"></label>
       <label>Reconciliation month <input name="month" inputmode="numeric" required placeholder="1–12"></label>
-      <button type="submit" class="btn btn-primary" {% if sync_running %}disabled{% endif %}>Run read-only sync</button>
+      <button type="submit" class="btn btn-primary" {% if sync_running %}disabled{% endif %}>Run sync</button>
     </form>
-    <p class="note">Enter the range and the month Finance will accept. Nothing is pre-filled.</p>
-    {% endif %}
-    {% if sync_running %}<p class="banner-wait">A sync is running. This page refreshes.</p><meta http-equiv="refresh" content="5">{% endif %}
+    {% if sync_running %}<p>A sync is running.</p><meta http-equiv="refresh" content="5">{% endif %}
   </div>
 </section>
+{% endif %}
 
 {% if probe %}
 <section class="section">
@@ -61,7 +51,7 @@
 {% endif %}
 
 <section class="section">
-  <div class="section-head"><h2>Sync runs</h2><p>Loaded runs only.</p></div>
+  <div class="section-head"><h2>Sync runs</h2></div>
   {% if runs %}
   <div class="section-body flush">
     <table class="stack">
@@ -90,64 +80,4 @@
   {% endif %}
 </section>
 
-{% if not runs %}
-<section class="section">
-  <div class="section-head">
-    <h2>Sample run list</h2>
-    <p>Layout only. These rows are not stored and are not a Business Central call.</p>
-  </div>
-  <div class="section-body flush">
-    <table class="stack">
-      <thead>
-        <tr><th>Run</th><th>Stream</th><th>Status</th><th>Read</th><th>Accepted</th><th>Rejected</th><th>Checkpoint</th><th>Error</th></tr>
-      </thead>
-      <tbody>
-        {% for run in sample_runs %}
-        <tr>
-          <td data-label="Run" class="mono">{{ run.id }}</td>
-          <td data-label="Stream">{{ run.endpoint_code }}</td>
-          {% set kind = 'done' if run.status == 'SUCCEEDED' else 'attention' %}
-          <td data-label="Status">{{ chip('review', 'Sample') }} {{ chip(kind, run.status) }}</td>
-          <td data-label="Read" class="num">{{ run.rows_read }}</td>
-          <td data-label="Accepted" class="num">{{ run.rows_accepted }}</td>
-          <td data-label="Rejected" class="num">{{ run.rows_rejected }}</td>
-          <td data-label="Checkpoint" class="mono">{{ run.committed_checkpoint }}</td>
-          <td data-label="Error">{{ run.error_summary }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-{% endif %}
-
-{% if notes %}
-<section class="section">
-  <div class="section-head"><h2>Notices</h2></div>
-  <div class="section-body">
-    <ul>{% for note in notes %}<li>{{ chip('attention' if note.level == 'ERROR' else 'ready', note.level) }} {{ note.message }}</li>{% endfor %}</ul>
-  </div>
-</section>
-{% endif %}
-
-<section class="section">
-  <div class="section-head">
-    <h2>Dimension codes for the first company</h2>
-    <p>Taken from the Advancly extract. Dimension values, not a second chart, and not balances. They appear in the database only after Business Central returns them.</p>
-  </div>
-  <div class="section-body flush">
-    <table class="stack">
-      <thead><tr><th>Kind</th><th>Code</th><th>Name in the extract</th></tr></thead>
-      <tbody>
-        {% for kind, code, name in dimensions %}
-        <tr>
-          <td data-label="Kind">{{ kind }}</td>
-          <td data-label="Code" class="mono">{{ code }}</td>
-          <td data-label="Name">{{ name }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
 {% endblock %}

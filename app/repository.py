@@ -118,6 +118,13 @@ def list_library(root: Path) -> list[dict]:
     return rows
 
 
+def file_count(conn) -> int:
+    row = conn.execute(
+        "SELECT count(*) AS n FROM finance.repository_node WHERE kind = 'file'"
+    ).fetchone()
+    return int(row["n"])
+
+
 def children(conn, parent_id: UUID | None) -> list[dict]:
     return conn.execute(
         """

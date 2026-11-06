@@ -17,9 +17,8 @@
           <h1>VGG OS</h1>
         </div>
         <h2>Sign in</h2>
-        <p class="note">Group books and the bank register. The first company to load is Advancly Technologies NIG Ltd. Use the local admin account until appraisal sign-in is ready. Password reset stays on the appraisal site.</p>
         {% if error %}<p class="gate-error">{{ error }}</p>{% endif %}
-        <form method="post" action="/api/session" class="stack">
+        <form method="post" action="/api/session" class="stack" onsubmit="this.querySelector('button').textContent='Signing in'">
           <input type="hidden" name="csrf_token" value="{{ csrf }}">
           <label>Email <input name="email" type="email" autocomplete="username" required></label>
           <label>Password <input name="password" type="password" autocomplete="current-password" required></label>

@@ -6,59 +6,31 @@
     <span class="tick" aria-hidden="true"></span>
     <div>
       <h1>Finance</h1>
-      <p>SQL pack {{ sql_pack }}. Books and bank accounts for the group. The first Business Central company is {{ expected_name }}. A load is a ledger extract. It does not publish the group reports.</p>
+      <p>Books, bank accounts, and the report library.</p>
     </div>
   </div>
 </header>
-
-{% if blockers %}
-<section class="banner-wait">
-  <p>Business Central has not been called.</p>
-  <ul>
-    {% for item in blockers %}<li>{{ item }}</li>{% endfor %}
-  </ul>
-</section>
-{% else %}
-<section class="callout">
-  <p>Business Central is configured. Open Books to run the read-only sync.</p>
-</section>
-{% endif %}
 
 <section class="metrics">
   <a class="stat" href="/books">
     <span class="label">Sync runs</span>
     <span class="value">{{ run_count }}</span>
-    <span class="hint">Open the run list</span>
+    <span class="hint">Books</span>
   </a>
   <a class="stat" href="/bank-accounts">
-    <span class="label">Bank accounts loaded</span>
+    <span class="label">Bank accounts</span>
     <span class="value">{{ bank_count }}</span>
-    <span class="hint">Open the register</span>
+    <span class="hint">Register</span>
   </a>
   <a class="stat" href="/bank-accounts">
     <span class="label">Open mismatches</span>
     <span class="value">{{ task_count }}</span>
-    <span class="hint">Open the three queues</span>
+    <span class="hint">Follow up</span>
   </a>
-  <a class="stat" href="/reports">
-    <span class="label">Reports pending</span>
-    <span class="value">{{ pending_reports }}</span>
-    <span class="hint">Open the catalogue</span>
+  <a class="stat" href="/repositories">
+    <span class="label">Report files</span>
+    <span class="value">{{ file_count }}</span>
+    <span class="hint">Repositories</span>
   </a>
-</section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>What arrives with the first load</h2>
-    <p>Counts above are the database. Sample layouts on the other screens are not stored.</p>
-  </div>
-  <div class="section-body">
-    <div class="cells">
-      <div class="cell"><span>First company</span><strong>{{ expected_name }}</strong></div>
-      <div class="cell"><span>First company id</span><strong class="mono">{{ expected_id }}</strong></div>
-      <div class="cell"><span>Secret reference</span><strong class="mono">{{ secret_reference }}</strong></div>
-      <div class="cell"><span>Trial balance</span><strong>One month, beside the Business Central control total</strong></div>
-    </div>
-  </div>
 </section>
 {% endblock %}

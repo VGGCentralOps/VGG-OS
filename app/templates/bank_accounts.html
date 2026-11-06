@@ -7,17 +7,13 @@
     <span class="tick" aria-hidden="true"></span>
     <div>
       <h1>Bank accounts</h1>
-      <p>View only, for the group. The first rows will be Advancly Technologies NIG Ltd., from Business Central bankAccounts. VGG OS does not create, close, edit, or pay them. {% if unmasked %}Account numbers are shown in full for this sign-in.{% else %}Account numbers are masked.{% endif %} No balance column: Mono has not been called, and no statement file has been read.</p>
+      <p>{% if unmasked %}Account numbers are shown in full.{% else %}Account numbers are masked.{% endif %}</p>
     </div>
   </div>
 </header>
 
-<section class="callout">
-  <p>Owner, data route, and link status are stored here, keyed to the Business Central account id. Whether they should be custom fields in Business Central is still open. Owners stay empty until Melissa names them.</p>
-</section>
-
 <section class="section">
-  <div class="section-head"><h2>Register</h2><p>Loaded accounts only.</p></div>
+  <div class="section-head"><h2>Register</h2></div>
   {% if rows %}
   <div class="section-body">
     {% if can_export %}<p><a href="/bank-accounts.csv">{% if unmasked %}Export the register{% else %}Export the masked register{% endif %}</a></p>{% endif %}
@@ -49,7 +45,7 @@
   </div>
   {% else %}
   <div class="section-body">
-    <p class="empty">No bank accounts are loaded. The register fills from Business Central, starting with Advancly Technologies NIG Ltd. It is not a guessed list.</p>
+    <p class="empty">No bank accounts are loaded.</p>
   </div>
   {% endif %}
   <div class="section-body">
@@ -57,73 +53,38 @@
       <input type="hidden" name="csrf_token" value="{{ csrf }}">
       <button type="submit" class="btn btn-secondary">Run the daily check</button>
     </form>
-    <p class="note">The check reads this database only. It does not call Mono or read a statement file.</p>
   </div>
 </section>
 
-{% if not rows %}
 <section class="section">
-  <div class="section-head">
-    <h2>Sample register</h2>
-    <p>Layout for the first company only. No balance is stored. Owners are not named. These rows are not in the database.</p>
-  </div>
-  <div class="section-body flush">
-    <table class="stack">
-      <thead>
-        <tr>
-          <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th><th>Business Central id</th>
-          <th>Accountable owner</th><th>Data route</th><th>Link status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in sample_rows %}
-        <tr>
-          <td data-label="Owning entity">{{ row.entity_name }}</td>
-          <td data-label="Account" class="mono">{{ row.account_display }}</td>
-          <td data-label="Name">{{ row.bank_name }} {{ chip('review', 'Sample') }}</td>
-          <td data-label="Currency" class="mono">{{ row.currency_code }}</td>
-          <td data-label="Business Central id" class="mono">{{ row.bc_account_id }}</td>
-          <td data-label="Accountable owner" class="missing">Not named</td>
-          <td data-label="Data route">{{ chip('ready', 'Unassigned') }}</td>
-          <td data-label="Link status">{{ chip('waiting', 'No feed') }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-{% endif %}
-
-<section class="section">
-  <div class="section-head"><h2>In Business Central, no feed</h2><p>Central Operations.</p></div>
+  <div class="section-head"><h2>In Business Central, no feed</h2></div>
   <div class="section-body">
     {% if grouped["IN_BC_NO_FEED"] %}
     <ul>{% for task in grouped["IN_BC_NO_FEED"] %}<li>{{ chip('waiting', 'Open') }} {{ task.detail }}</li>{% endfor %}</ul>
     {% else %}
     <p>None.</p>
-    <p class="note">Sample of this queue, not an open task: Operating ••••6789 would sit here after the load, with no feed attached.</p>
     {% endif %}
   </div>
 </section>
 
 <section class="section">
-  <div class="section-head"><h2>Feed with no Business Central account</h2><p>Treasury and Internal Audit. This stays empty until a feed exists.</p></div>
+  <div class="section-head"><h2>Feed with no Business Central account</h2></div>
   <div class="section-body">
     {% if grouped["FEED_WITHOUT_BC"] %}
     <ul>{% for task in grouped["FEED_WITHOUT_BC"] %}<li>{{ chip('attention', 'Open') }} {{ task.detail }} <code>{{ task.feed_reference }}</code></li>{% endfor %}</ul>
     {% else %}
-    <p>None. No bank feed is connected.</p>
+    <p>None.</p>
     {% endif %}
   </div>
 </section>
 
 <section class="section">
-  <div class="section-head"><h2>Linked but stale</h2><p>The account owner. This stays empty until a feed exists.</p></div>
+  <div class="section-head"><h2>Linked but stale</h2></div>
   <div class="section-body">
     {% if grouped["LINKED_STALE"] %}
     <ul>{% for task in grouped["LINKED_STALE"] %}<li>{{ chip('waiting', 'Open') }} {{ task.detail }}</li>{% endfor %}</ul>
     {% else %}
-    <p>None. No bank feed is connected.</p>
+    <p>None.</p>
     {% endif %}
   </div>
 </section>
@@ -131,12 +92,7 @@
 <section class="section">
   <div class="section-head"><h2>Dormancy</h2></div>
   <div class="section-body">
-    {% if rule %}
-    <p>{{ rule.note }} The rule is disabled. Inactive months: {{ "empty" if rule.inactive_after_months is none else rule.inactive_after_months }}. Dormant months: {{ "empty" if rule.dormant_after_months is none else rule.dormant_after_months }}. No account is flagged dormant.</p>
-    {% else %}
-    <p>No dormancy rule is stored. No account is flagged dormant.</p>
-    {% endif %}
-    <p class="note">The design’s unsigned range is not stored as the threshold and is not applied. A missing or failed pull does not flag an account.</p>
+    <p>No account is flagged dormant.</p>
   </div>
 </section>
 {% endblock %}
