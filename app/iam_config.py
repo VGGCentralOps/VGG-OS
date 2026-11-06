@@ -25,6 +25,7 @@ BROWSER_ORIGINS = (
     "http://127.0.0.1:8096",
     "http://localhost:8096",
     "https://vggos.vgg.tools",
+    "https://vgg-os.onrender.com",
 )
 
 SCOPE_ACTION = {
