@@ -529,7 +529,7 @@ def books_inventory(conn) -> dict:
     ).fetchall()
     gl_entries = conn.execute(
         """
-        SELECT e.name AS company_name, g.posting_date, g.document_number, g.amount, a.account_code
+        SELECT e.name AS company_name, g.posting_date, g.document_reference, g.amount, a.account_code
         FROM finance.gl_entry g
         JOIN core.entity e ON e.id = g.entity_id
         LEFT JOIN finance.account a ON a.id = g.account_id
