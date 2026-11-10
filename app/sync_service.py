@@ -857,7 +857,11 @@ class SyncService:
         return True
 
     def _project_bank(self, conn, company, run_id, raw, payload, lcy) -> bool:
-        bc_id = str(first_present(payload, "id", "no") or "")
+        # Prefer the Business Central id. Fall back to account number only when id is absent.
+        # Code must be unique globally, so include the company key — B0010 repeats across companies.
+        bc_id = str(payload.get("id") or "").strip() or blank_text(
+            first_present(payload, "number", "no", "bankAccountNo", "bankAccountNumber")
+        )
         number = blank_text(first_present(payload, "bankAccountNo", "bankAccountNumber", "number", "no"))
         masked = mask_account_number(number)
         currency = blank_text(payload.get("currencyCode")) or (lcy or "")
@@ -873,31 +877,53 @@ class SyncService:
         self._ensure_currency(conn, currency)
         name = blank_text(first_present(payload, "name", "displayName")) or "(not supplied)"
         blocked = payload.get("blocked") is True
-        existing = conn.execute(
+        local_code = f"bc:{company['external_company_key']}:{bc_id}"
+        mapped = conn.execute(
             """
             SELECT bank_account_id FROM finance.bank_book_mapping
             WHERE company_id = %s AND external_bank_account_key = %s
             """,
             (company["id"], bc_id),
         ).fetchone()
+        legacy = None
+        if mapped is None:
+            # Older Advancly rows used bc:{number} before company scoping.
+            legacy = conn.execute(
+                """
+                SELECT a.id AS bank_account_id
+                FROM finance.bank_account a
+                WHERE a.entity_id = %s AND a.code IN (%s, %s)
+                """,
+                (company["entity_id"], local_code, f"bc:{bc_id}"),
+            ).fetchone()
+        existing = mapped or legacy
         if existing:
             bank_id = existing["bank_account_id"]
             conn.execute(
                 """
                 UPDATE finance.bank_account
-                SET bank_name = %s, account_display = %s, currency_code = %s, active = %s
+                SET code = %s, bank_name = %s, account_display = %s, currency_code = %s, active = %s
                 WHERE id = %s
                 """,
-                (name, masked, currency, not blocked, bank_id),
+                (local_code, name, masked, currency, not blocked, bank_id),
             )
             conn.execute(
                 """
                 UPDATE finance.bank_account_governance
-                SET in_latest_bc_list = true
+                SET in_latest_bc_list = true, bc_account_id = %s
                 WHERE bank_account_id = %s
                 """,
-                (bank_id,),
+                (bc_id, bank_id),
             )
+            if mapped is None:
+                conn.execute(
+                    """
+                    INSERT INTO finance.bank_book_mapping
+                      (bank_account_id, entity_id, company_id, external_bank_account_key)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (bank_id, company["entity_id"], company["id"], bc_id),
+                )
         else:
             bank_id = conn.execute(
                 """
@@ -905,7 +931,7 @@ class SyncService:
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (company["entity_id"], f"bc:{bc_id}", name, masked, currency, not blocked),
+                (company["entity_id"], local_code, name, masked, currency, not blocked),
             ).fetchone()["id"]
             conn.execute(
                 """
