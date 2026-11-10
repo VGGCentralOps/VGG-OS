@@ -116,6 +116,18 @@ def wants_json(request: Request) -> bool:
     return "application/json" in content_type or "application/json" in accept
 
 
+def optional_int(value: str | int | None) -> int | None:
+    """HTML forms send empty strings for blank fields; treat those as missing."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, int):
+        return value
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
 def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limiter=None) -> FastAPI:
     current = settings or load_settings()
     require_anon_key(current.auth_anon_key)
@@ -598,16 +610,19 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
     @app.get("/bank-movements", response_class=HTMLResponse)
     def movements(
         request: Request,
-        account_id: int | None = None,
-        year: int | None = None,
-        month: int | None = None,
+        account_id: str | None = None,
+        year: str | None = None,
+        month: str | None = None,
     ):
         session = guard(request, "bank:read")
         if not isinstance(session, SessionView):
             return session
-        chosen_account = account_id if account_id and account_id > 0 else None
-        chosen_year = year if year and year >= 2000 else None
-        chosen_month = month if month and 1 <= month <= 12 else None
+        parsed_account = optional_int(account_id)
+        parsed_year = optional_int(year)
+        parsed_month = optional_int(month)
+        chosen_account = parsed_account if parsed_account and parsed_account > 0 else None
+        chosen_year = parsed_year if parsed_year and parsed_year >= 2000 else None
+        chosen_month = parsed_month if parsed_month and 1 <= parsed_month <= 12 else None
         if (chosen_year is None) != (chosen_month is None):
             chosen_year = None
             chosen_month = None
@@ -630,18 +645,21 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
     @app.get("/bank-movements.csv")
     def movements_csv(
         request: Request,
-        account_id: int | None = None,
-        year: int | None = None,
-        month: int | None = None,
+        account_id: str | None = None,
+        year: str | None = None,
+        month: str | None = None,
     ):
         session = guard(request, "bank:read")
         if not isinstance(session, SessionView):
             return session
         if "export" not in session.scopes:
             return JSONResponse({"status": "not permitted"}, status_code=403)
-        chosen_account = account_id if account_id and account_id > 0 else None
-        chosen_year = year if year and year >= 2000 else None
-        chosen_month = month if month and 1 <= month <= 12 else None
+        parsed_account = optional_int(account_id)
+        parsed_year = optional_int(year)
+        parsed_month = optional_int(month)
+        chosen_account = parsed_account if parsed_account and parsed_account > 0 else None
+        chosen_year = parsed_year if parsed_year and parsed_year >= 2000 else None
+        chosen_month = parsed_month if parsed_month and 1 <= parsed_month <= 12 else None
         if (chosen_year is None) != (chosen_month is None):
             chosen_year = None
             chosen_month = None
