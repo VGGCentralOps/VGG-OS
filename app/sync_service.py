@@ -487,13 +487,21 @@ class SyncService:
         run_id, before = self._begin_run(conn, company["id"], entity_set, scope, actor)
         high_water = None
         try:
-            if before.get("rowVersion"):
+            used_row_version = False
+            if before.get("rowVersion") not in (None, ""):
                 lower = before.get("previousRowVersion") or "0"
-                self._fetch(
-                    conn, client, company, run_id, entity_set,
-                    f"systemRowVersion gt {lower}", versions, select,
-                )
-            else:
+                try:
+                    self._fetch(
+                        conn, client, company, run_id, entity_set,
+                        f"systemRowVersion gt {lower}", versions, select,
+                    )
+                    used_row_version = True
+                except BcError as exc:
+                    # BCTEST integration G/L and bank ledger do not publish systemRowVersion.
+                    if exc.status != 400:
+                        raise
+                    used_row_version = False
+            if not used_row_version:
                 high_water = self._high_water(client, company, entity_set)
                 for slice_start, slice_end in month_slices(date_from, date_to):
                     filt = (
@@ -502,10 +510,15 @@ class SyncService:
                     )
                     self._fetch(conn, client, company, run_id, entity_set, filt, versions, select)
                 if high_water is not None:
-                    self._fetch(
-                        conn, client, company, run_id, entity_set,
-                        f"systemRowVersion gt {high_water}", versions, select,
-                    )
+                    try:
+                        self._fetch(
+                            conn, client, company, run_id, entity_set,
+                            f"systemRowVersion gt {high_water}", versions, select,
+                        )
+                    except BcError as exc:
+                        if exc.status != 400:
+                            raise
+                        high_water = None
             after = advance_checkpoint(before, versions, high_water)
             # Project outside one giant transaction. A multi-thousand-row ledger
             # held open over WSL was hanging the Postgres session mid-insert.

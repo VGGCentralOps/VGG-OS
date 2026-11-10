@@ -16,6 +16,14 @@ def advance_checkpoint(
     current = committed or {}
     row_version = current.get("rowVersion")
     if row_version in (None, ""):
+        # No systemRowVersion on this API (high_water probe returned None) and no
+        # versions seen on the page → keep a posting-date checkpoint only.
+        if high_water_before is None and seen_max is None:
+            return {
+                key: value
+                for key, value in current.items()
+                if key not in {"rowVersion", "previousRowVersion"}
+            }
         base = 0 if high_water_before is None else int(high_water_before)
         row = base if seen_max is None else max(base, int(seen_max))
         return {"previousRowVersion": str(base), "rowVersion": str(row)}
