@@ -21,6 +21,9 @@
 </div>
 {% endif %}
 
+{% set totals = totals or {"companies": 0, "accounts": 0, "bank_accounts": 0, "gl_entries": 0, "bank_ledger_entries": 0} %}
+{% set companies = companies or [] %}
+{% set dataset_counts = dataset_counts or [] %}
 <section class="kpis" aria-label="Loaded books">
   <div class="kpi">
     <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
