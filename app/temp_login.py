@@ -50,6 +50,17 @@ def is_temp_token(token: str) -> bool:
     return token == TEMP_MARKER
 
 
+def temp_session_still_allowed(conn, settings, subject: str) -> bool:
+    """Checked on every request, so switching the login off or deactivating the row ends open sessions."""
+    if not settings.temp_db_login:
+        return False
+    row = conn.execute(
+        "SELECT active FROM iam.temp_credential WHERE external_subject = %s",
+        (subject,),
+    ).fetchone()
+    return bool(row and row["active"])
+
+
 def open_temp_session(conn, settings, email: str, password: str):
     """Return a LoginResult when this email is a temporary account, otherwise None."""
     from app.login_flow import GENERIC, LoginResult, UNAVAILABLE

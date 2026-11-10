@@ -1,101 +1,131 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% from "_chip.html" import chip %}
+{% from "_fmt.html" import when, n, period %}
 {% block title %}Trial balance · VGG OS{% endblock %}
 {% block body %}
-<header class="page-header">
-  <div class="page-title">
-    <span class="tick" aria-hidden="true"></span>
-    <div>
-      <h1>Trial balance</h1>
-      <p>One company, one month.</p>
-    </div>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Books</p>
+    <h1>Trial balance check</h1>
+    <p class="lead">Loaded ledger lines for one month beside the Business Central control total. Missing sides stay blank.</p>
   </div>
+  {% if report and can_export %}
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/trial-balance.csv?year={{ year }}&amp;month={{ month }}">{{ icon('download') }}Export CSV</a>
+  </div>
+  {% endif %}
 </header>
 
-<section class="section">
-  <div class="section-head"><h2>Month</h2></div>
-  <div class="section-body">
-    <form method="get" action="/trial-balance" class="fields">
-      <label>Year <input name="year" value="{{ year or '' }}" inputmode="numeric" required></label>
-      <label>Month <input name="month" value="{{ month or '' }}" inputmode="numeric" required></label>
-      <button type="submit" class="btn btn-secondary">Show month</button>
-    </form>
-    {% if months %}
-    <p>Loaded months:
-      {% for y, m in months %}<a href="/trial-balance?year={{ y }}&month={{ m }}">{{ y }}-{{ '%02d'|format(m) }}</a> {% endfor %}
-    </p>
-    {% else %}
-    <p class="empty">No month has been loaded.</p>
-    {% endif %}
+<section class="card">
+  <div class="card-body">
+    <div class="split">
+      <form method="get" action="/trial-balance" class="form-row">
+        <label class="field">Year<input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" required></label>
+        <label class="field">Month<input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" required></label>
+        <button type="submit" class="btn btn-primary">Show month</button>
+      </form>
+      {% if months %}
+      <nav class="pills" aria-label="Loaded months">
+        {% for y, m in months[:18] %}
+        <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/trial-balance?year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
+        {% endfor %}
+      </nav>
+      {% else %}
+      <p class="empty-inline">No month has been loaded.</p>
+      {% endif %}
+    </div>
   </div>
 </section>
 
 {% if report %}
-<section class="section">
-  <div class="section-head"><h2>{{ year }}-{{ '%02d'|format(month) }}</h2></div>
-  {% if not report.has_local and not report.has_control %}
-  <div class="section-body">
-    <p>No ledger lines and no Business Central control total for this month.</p>
+{% set diffs = report.rows|selectattr("difference")|list %}
+<section class="kpis" aria-label="Month summary">
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Month</span><span class="kpi-icon">{{ icon('clock') }}</span></span>
+    <span class="kpi-value">{{ period(year, month) }}</span>
+    <span class="kpi-hint">Advancly</span>
   </div>
-  {% else %}
-  <div class="section-body">
-    {% if report.local_sum_text %}
-    <p>Sum of accounts that have loaded lines: <strong class="mono">{{ report.local_sum_text }}</strong>. Accounts with no loaded lines are excluded. This is not a group total.</p>
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Accounts</span><span class="kpi-icon">{{ icon('list') }}</span></span>
+    <span class="kpi-value">{{ report.rows|length }}</span>
+    <span class="kpi-hint">On either side</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Differences</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
+    <span class="kpi-value">{{ diffs|length }}</span>
+    <span class="kpi-hint">Non-zero vs Business Central</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Local sum</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
+    <span class="kpi-value tabular">{{ report.local_sum_text or "—" }}</span>
+    <span class="kpi-hint">Accounts with loaded lines only</span>
+  </div>
+</section>
+
+<div class="grid-main-aside">
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">{{ icon('scale') }}<div><h2>{{ period(year, month) }}</h2><p class="meta">Net movement in the month, per account. Not a group total.</p></div></div>
+    </div>
+    {% if not report.has_local and not report.has_control %}
+    <div class="empty">{{ icon('inbox') }}<p>No ledger lines and no Business Central control total for this month.</p></div>
     {% else %}
-    <p>No ledger lines in this month, so there is no local sum.</p>
+    <div class="table-wrap tall">
+      <table class="data">
+        <thead>
+          <tr><th>Account</th><th>Name</th><th class="num">Local net</th><th class="num">Business Central net</th><th class="num">Difference</th><th class="num">Local lines</th><th class="num">BC entries</th></tr>
+        </thead>
+        <tbody>
+          {% for row in report.rows %}
+          <tr>
+            <td class="mono">{{ row.code }}</td>
+            <td class="wrap">{{ row.name or "Name missing" }}</td>
+            <td class="num{% if row.local_amount is none %} missing{% endif %}">{{ row.local_text }}</td>
+            <td class="num{% if row.bc_amount is none %} missing{% endif %}">{{ row.bc_text }}</td>
+            <td class="num{% if row.difference is none %} missing{% elif row.difference != 0 %} diff-nonzero{% else %} diff-zero{% endif %}">{{ row.difference_text }}</td>
+            <td class="num">{{ row.local_count if row.local_count is not none else "—" }}</td>
+            <td class="num">{{ row.bc_count if row.bc_count is not none else "—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% endif %}
-    {% if can_export %}<p><a href="/trial-balance.csv?year={{ year }}&month={{ month }}">Export this month</a></p>{% endif %}
-  </div>
-  <div class="section-body flush">
-    <table class="stack">
-      <thead>
-        <tr><th>Account</th><th>Name</th><th>Local net</th><th>Business Central net</th><th>Difference</th><th>Local lines</th><th>BC entries</th></tr>
-      </thead>
-      <tbody>
-        {% for row in report.rows %}
-        <tr>
-          <td data-label="Account" class="mono">{{ row.code }}</td>
-          <td data-label="Name">{{ row.name or "Name missing" }}</td>
-          <td data-label="Local net" class="num {% if row.local_amount is none %}missing{% endif %}">{{ row.local_text }}</td>
-          <td data-label="Business Central net" class="num {% if row.bc_amount is none %}missing{% endif %}">{{ row.bc_text }}</td>
-          <td data-label="Difference" class="num {% if row.difference is none %}missing{% endif %}">{{ row.difference_text }}</td>
-          <td data-label="Local lines" class="num">{{ row.local_count if row.local_count is not none else "Missing" }}</td>
-          <td data-label="BC entries" class="num">{{ row.bc_count if row.bc_count is not none else "Missing" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-</section>
-<section class="section">
-  <div class="section-head"><h2>Transaction numbers</h2></div>
-  <div class="section-body">
-    {% if not report.has_local %}
-    <p>No ledger lines in this month, so there is no transaction check.</p>
-    {% elif report.unbalanced %}
-    <p>These transaction numbers do not sum to zero.</p>
-    <ul>
-      {% for row in report.unbalanced %}
-      <li>Transaction {{ row.transaction_number }} sums to {{ row.total }} across {{ row.lines }} lines.</li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p>Every loaded transaction number in this month sums to zero.</p>
+  </section>
+
+  <aside class="stack-gap" aria-label="Checks">
+    <section class="card">
+      <div class="card-head"><div class="card-title">{{ icon('check') }}<h2>Transaction numbers</h2></div></div>
+      <div class="card-body">
+        {% if not report.has_local %}
+        <p class="empty-inline">No ledger lines in this month, so there is no transaction check.</p>
+        {% elif report.unbalanced %}
+        <div class="callout callout-err">{{ icon('alert') }}<p>{{ report.unbalanced|length }} transaction number{{ "s" if report.unbalanced|length != 1 }} do not sum to zero.</p></div>
+        <ul class="list-plain mt">
+          {% for row in report.unbalanced %}
+          <li><span class="mono">#{{ row.transaction_number }}</span><span class="grow small">sums to <span class="mono">{{ row.total }}</span> across {{ row.lines }} lines</span></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="callout callout-ok">{{ icon('check') }}<p>Every loaded transaction number in this month sums to zero.</p></div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if report.problems %}
+    <section class="card">
+      <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>Rejected and unmatched</h2></div><span class="count is-hot">{{ report.problems|length }}</span></div>
+      <div class="card-body">
+        <ul class="list-plain">
+          {% for problem in report.problems %}
+          <li><span class="grow small">{{ chip('waiting', problem.rule_code) }}<span class="cell-sub">{{ problem.message }}</span></span></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
     {% endif %}
-  </div>
-</section>
-{% if report.problems %}
-<section class="section">
-  <div class="section-head"><h2>Rejected, unmapped, and control differences</h2></div>
-  <div class="section-body">
-    <ul>
-      {% for problem in report.problems %}
-      <li>{{ chip('waiting', problem.rule_code) }} {{ problem.message }}</li>
-      {% endfor %}
-    </ul>
-  </div>
-</section>
-{% endif %}
+  </aside>
+</div>
 {% endif %}
 {% endblock %}

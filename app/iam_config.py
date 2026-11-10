@@ -33,6 +33,9 @@ SCOPE_ACTION = {
     "bank:read": "VIEW",
     "export": "EXPORT",
     "bank:unmask": "UNMASK",
+    # Write permissions. Reading a screen never implies changing data.
+    "books:sync": "SYNC",
+    "files:write": "WRITE",
 }
 
 

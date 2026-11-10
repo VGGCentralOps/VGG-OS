@@ -200,7 +200,12 @@ def appraisal_app(
 
 
 @contextmanager
-def signed_in_client(scopes=("books:read", "bank:read", "export"), email=READER_EMAIL, subject=READER_SUBJECT, name="Finance Reader"):
+def signed_in_client(
+    scopes=("books:read", "bank:read", "export", "books:sync", "files:write"),
+    email=READER_EMAIL,
+    subject=READER_SUBJECT,
+    name="Finance Reader",
+):
     with appraisal_app(subject, email, scopes, name) as (client, fake, settings, access, refresh, private, document):
         response = post_session(client, email)
         assert response.status_code == 303, response.text

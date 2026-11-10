@@ -1,0 +1,13 @@
+{% macro when(value, with_time=true) -%}
+{%- if value is none or value == "" -%}—
+{%- elif value is string -%}{{ value }}
+{%- elif with_time and value.hour is defined -%}{{ value.strftime('%d %b %Y, %H:%M') }}
+{%- else -%}{{ value.strftime('%d %b %Y') }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro n(value) -%}
+{%- if value is none -%}—{%- else -%}{{ value }}{%- endif -%}
+{%- endmacro %}
+
+{% macro period(y, m) -%}{{ y }}-{{ '%02d'|format(m) }}{%- endmacro %}

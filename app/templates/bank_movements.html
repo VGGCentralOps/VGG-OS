@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_chip.html" import chip %}
+{% from "_fmt.html" import when, n, period %}
+{% block title %}Bank movements · VGG OS{% endblock %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Banks</p>
+    <h1>Bank movements</h1>
+    <p class="lead">Business Central bank account ledger entries for Advancly. This is the book side, not a bank statement and not a live balance.</p>
+  </div>
+  {% if report.total_rows and can_export %}
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/bank-movements.csv{% if account_id or year %}?{% endif %}{% if account_id %}account_id={{ account_id }}{% endif %}{% if account_id and year %}&amp;{% endif %}{% if year and month %}year={{ year }}&amp;month={{ month }}{% endif %}">{{ icon('download') }}Export CSV</a>
+  </div>
+  {% endif %}
+</header>
+
+<section class="card">
+  <div class="card-body">
+    <form method="get" action="/bank-movements" class="fields">
+      <label class="field">Account
+        <select name="account_id">
+          <option value="">All accounts</option>
+          {% for account in accounts %}
+          <option value="{{ account.id }}" {% if account_id == account.id %}selected{% endif %}>{{ account.bank_name }} · {{ account.account_display }}{% if account.currency_code %} ({{ account.currency_code }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field">Year<input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" placeholder="YYYY"></label>
+      <label class="field">Month<input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" placeholder="1–12"></label>
+      <div class="span-all split">
+        <p class="muted small">Leave month blank to see every loaded posting date.</p>
+        <button type="submit" class="btn btn-primary">Show movements</button>
+      </div>
+    </form>
+    {% if months %}
+    <nav class="pills mt" aria-label="Loaded months">
+      {% for y, m in months[:18] %}
+      <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/bank-movements?{% if account_id %}account_id={{ account_id }}&amp;{% endif %}year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+  </div>
+</section>
+
+<section class="kpis" aria-label="Movement totals">
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Entries</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
+    <span class="kpi-value">{{ n(report.total_rows) }}</span>
+    <span class="kpi-hint">{% if report.truncated %}Showing first {{ report.rows|length }}{% else %}In this filter{% endif %}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Accounts in filter</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
+    <span class="kpi-value">{{ n(report.summary|length) }}</span>
+    <span class="kpi-hint">Book ledger only</span>
+  </div>
+</section>
+
+{% if report.summary %}
+<section class="card">
+  <div class="card-head">
+    <div class="card-title">{{ icon('list') }}<div><h2>By account</h2><p class="meta">Inflow and outflow stay blank when any amount in the filter is missing.</p></div></div>
+  </div>
+  <div class="table-wrap mid">
+    <table class="data">
+      <thead>
+        <tr><th>Account</th><th>Currency</th><th class="num">Entries</th><th class="num">Inflow</th><th class="num">Outflow</th><th class="num">Net</th><th>First</th><th>Last</th></tr>
+      </thead>
+      <tbody>
+        {% for item in report.summary %}
+        <tr>
+          <td>{{ item.bank_name }}<div class="cell-sub mono">{{ item.account_display }}</div></td>
+          <td class="mono">{{ item.currency_code or "—" }}</td>
+          <td class="num">{{ n(item.entries) }}</td>
+          <td class="num tabular">{{ item.inflow_text }}</td>
+          <td class="num tabular">{{ item.outflow_text }}</td>
+          <td class="num tabular">{{ item.net_text }}</td>
+          <td class="nowrap tabular">{{ when(item.first_date, false) }}</td>
+          <td class="nowrap tabular">{{ when(item.last_date, false) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <div class="card-title">{{ icon('movements') }}<div><h2>Ledger lines</h2><p class="meta">Newest posting date first.</p></div></div>
+  </div>
+  {% if report.rows %}
+  <div class="table-wrap tall">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Posted</th><th>Account</th><th>Document</th><th>Description</th><th>Direction</th><th class="num">Amount</th><th class="num">LCY</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.rows %}
+        <tr>
+          <td class="nowrap tabular">{{ when(row.posting_date, false) }}</td>
+          <td>{{ row.bank_name }}<div class="cell-sub mono">{{ row.account_display }}</div></td>
+          <td class="mono small">{{ row.document_number or "—" }}{% if row.document_type %}<div class="cell-sub">{{ row.document_type }}</div>{% endif %}</td>
+          <td class="wrap">{{ row.description or "—" }}</td>
+          <td>
+            {% if row.direction == 'in' %}{{ chip('ok', 'In') }}
+            {% elif row.direction == 'out' %}{{ chip('attention', 'Out') }}
+            {% else %}{{ chip('waiting', '—') }}{% endif %}
+          </td>
+          <td class="num tabular">{{ row.amount_text }}</td>
+          <td class="num tabular">{{ row.amount_lcy_text }}</td>
+          <td>
+            {% if row.reversed %}{{ chip('attention', 'Reversed') }}
+            {% elif row.open %}{{ chip('waiting', 'Open') }}
+            {% elif row.statement_status %}{{ chip('ready', row.statement_status) }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if report.truncated %}
+  <div class="card-body"><p class="muted small">Showing the newest {{ report.rows|length }} of {{ report.total_rows }} rows. Export CSV for the full filter.</p></div>
+  {% endif %}
+  {% else %}
+  <div class="empty">{{ icon('inbox') }}<p>No bank ledger entries are loaded for this filter. Run a Business Central pull that includes bank account ledger entries.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

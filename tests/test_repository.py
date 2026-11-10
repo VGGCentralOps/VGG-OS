@@ -50,7 +50,7 @@ def test_repositories_page_and_rejected_upload():
         page = signed.get("/repositories")
         assert page.status_code == 200
         assert "Add a file here" in page.text
-        assert "Reports and working files" in page.text
+        assert "Prepared Finance reports" in page.text
         token = csrf_from(page.text)
         rejected = signed.post(
             "/repositories/upload",

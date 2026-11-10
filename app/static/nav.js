@@ -1,125 +1,142 @@
+/* VGG OS page behaviour. Loaded with defer; no inline script or handler attributes anywhere (CSP script-src 'self'). */
 (function () {
-  const cache = new Map();
-  const page = document.querySelector(".portal-page");
-  if (!page) return;
+  "use strict";
+  var root = document.documentElement;
+  var KEY = "vggos.nav.collapsed";
 
-  function keyOf(url) {
-    return url.pathname + url.search;
+  function store(get, value) {
+    try {
+      if (get) return window.localStorage.getItem(KEY);
+      window.localStorage.setItem(KEY, value);
+    } catch (e) { return null; }
+    return null;
   }
 
-  function isPageLink(url) {
+  /* Sidebar collapse (desktop). Preference only; no data. */
+  var collapseBtn = document.querySelector("[data-collapse]");
+  function applyCollapsed(on) {
+    root.classList.toggle("nav-collapsed", on);
+    if (collapseBtn) {
+      collapseBtn.setAttribute("aria-expanded", on ? "false" : "true");
+      collapseBtn.setAttribute("aria-label", on ? "Expand navigation" : "Collapse navigation");
+    }
+  }
+  applyCollapsed(store(true) === "1");
+  if (collapseBtn) {
+    collapseBtn.addEventListener("click", function () {
+      var on = !root.classList.contains("nav-collapsed");
+      applyCollapsed(on);
+      store(false, on ? "1" : "0");
+    });
+  }
+
+  /* Slim progress bar for full page navigations and form posts. */
+  var bar = document.getElementById("progress");
+  function startProgress() {
+    if (!bar) return;
+    bar.classList.remove("is-done");
+    void bar.offsetWidth;
+    bar.classList.add("is-active");
+  }
+  function stopProgress() {
+    if (!bar) return;
+    bar.classList.remove("is-active");
+    bar.classList.add("is-done");
+  }
+  window.addEventListener("pageshow", stopProgress);
+
+  function isPlainNavigation(link, event) {
+    if (event.defaultPrevented || event.button !== 0) return false;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
+    if (link.target && link.target !== "_self") return false;
+    if (link.hasAttribute("download")) return false;
+    var url;
+    try { url = new URL(link.href, location.href); } catch (e) { return false; }
     if (url.origin !== location.origin) return false;
-    const path = url.pathname;
-    if (path.startsWith("/static") || path.startsWith("/api") || path === "/login") return false;
-    if (path.endsWith("/file") || path.endsWith(".csv")) return false;
+    if (/\.csv$/.test(url.pathname) || /\/file$/.test(url.pathname)) return false;
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return false;
     return true;
   }
-
-  function setActive(path) {
-    document.querySelectorAll(".side-nav a, .tabbar a").forEach(function (link) {
-      const target = new URL(link.href, location.origin);
-      const on = target.pathname === "/"
-        ? path === "/"
-        : path === target.pathname || (target.pathname === "/repositories" && path.startsWith("/repositories"));
-      link.classList.toggle("is-active", on);
-      if (on) link.setAttribute("aria-current", "page");
-      else link.removeAttribute("aria-current");
-    });
-  }
-
-  function remember(url, html) {
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const next = doc.querySelector(".portal-page");
-    if (!next) return null;
-    const item = { title: doc.title, html: next.innerHTML };
-    cache.set(keyOf(url), item);
-    if (cache.size > 40) cache.delete(cache.keys().next().value);
-    return item;
-  }
-
-  function show(url, item, push) {
-    page.innerHTML = item.html;
-    page.classList.remove("is-waiting");
-    document.title = item.title;
-    setActive(url.pathname);
-    const scroller = document.querySelector(".portal-scroll");
-    if (scroller) scroller.scrollTop = 0;
-    if (push) history.pushState({}, "", url.pathname + url.search);
-    prefetchAround();
-  }
-
-  function load(url) {
-    const key = keyOf(url);
-    if (cache.has(key)) return Promise.resolve(cache.get(key));
-    return fetch(url.pathname + url.search, { credentials: "same-origin", headers: { Accept: "text/html" } })
-      .then(function (response) {
-        if (response.redirected && response.url.indexOf("/login") !== -1) {
-          location.assign("/login");
-          return null;
-        }
-        if (!response.ok) {
-          location.assign(url.pathname + url.search);
-          return null;
-        }
-        return response.text().then(function (html) {
-          return remember(new URL(response.url), html);
-        });
-      })
-      .catch(function () {
-        location.assign(url.pathname + url.search);
-        return null;
-      });
-  }
-
-  function open(url, push) {
-    setActive(url.pathname);
-    const hit = cache.get(keyOf(url));
-    if (hit) {
-      show(url, hit, push);
-      return;
-    }
-    page.classList.add("is-waiting");
-    load(url).then(function (item) {
-      if (item) show(url, item, push);
-    });
-  }
-
-  function prefetch(href) {
-    try {
-      const url = new URL(href, location.origin);
-      if (!isPageLink(url) || cache.has(keyOf(url))) return;
-      load(url);
-    } catch (error) {
-      return;
-    }
-  }
-
-  function prefetchAround() {
-    document.querySelectorAll(".side-nav a[href], .tabbar a[href], .portal-page a[href]").forEach(function (link) {
-      prefetch(link.getAttribute("href"));
-    });
-  }
-
   document.addEventListener("click", function (event) {
-    if (event.defaultPrevented || event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const link = event.target.closest("a[href]");
-    if (!link) return;
-    const url = new URL(link.href, location.origin);
-    if (!isPageLink(url)) return;
-    event.preventDefault();
-    open(url, true);
+    var link = event.target.closest && event.target.closest("a[href]");
+    if (link && isPlainNavigation(link, event)) startProgress();
   });
 
-  document.addEventListener("pointerover", function (event) {
-    const link = event.target.closest("a[href]");
-    if (link) prefetch(link.getAttribute("href"));
+  /* Prefetch navigation links only (sidebar, tab bar, more sheet). Never POST targets, exports or sign-out. */
+  var prefetched = Object.create(null);
+  function prefetch(link) {
+    var url;
+    try { url = new URL(link.href, location.href); } catch (e) { return; }
+    if (url.origin !== location.origin) return;
+    var path = url.pathname;
+    if (path === "/logout" || path.indexOf("/api/") === 0 || /\.csv$/.test(path) || /\/file$/.test(path)) return;
+    if (path === location.pathname && url.search === location.search) return;
+    var key = path + url.search;
+    if (prefetched[key]) return;
+    prefetched[key] = true;
+    var hint = document.createElement("link");
+    hint.rel = "prefetch";
+    hint.href = key;
+    hint.as = "document";
+    document.head.appendChild(hint);
+  }
+  function onIntent(event) {
+    var link = event.target.closest && event.target.closest("a[data-prefetch]");
+    if (link) prefetch(link);
+  }
+  document.addEventListener("pointerover", onIntent, { passive: true });
+  document.addEventListener("focusin", onIntent);
+  document.addEventListener("touchstart", onIntent, { passive: true });
+
+  /* Forms: confirmation, busy state, progress. */
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    var message = form.getAttribute("data-confirm");
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+      return;
+    }
+    var button = form.querySelector("button[type=submit], button:not([type])");
+    if (button) {
+      var busy = button.getAttribute("data-busy");
+      if (busy) {
+        var label = button.querySelector("[data-label]") || button;
+        label.textContent = busy;
+      }
+      button.setAttribute("aria-busy", "true");
+      window.setTimeout(function () { button.disabled = true; }, 0);
+    }
+    startProgress();
   });
 
-  window.addEventListener("popstate", function () {
-    open(new URL(location.href), false);
+  /* Auto-submit filter selects. */
+  document.addEventListener("change", function (event) {
+    var el = event.target;
+    if (el && el.matches && el.matches("select[data-autosubmit]") && el.form) {
+      startProgress();
+      el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit();
+    }
   });
 
-  if ("requestIdleCallback" in window) requestIdleCallback(prefetchAround);
-  else setTimeout(prefetchAround, 50);
+  /* Close the mobile "More" sheet when tapping outside it. */
+  document.addEventListener("click", function (event) {
+    document.querySelectorAll("details.more[open]").forEach(function (sheet) {
+      if (!sheet.contains(event.target)) sheet.removeAttribute("open");
+    });
+  });
+
+  /* Pages that ask to refresh themselves while work is running (e.g. a sync). */
+  var refresher = document.querySelector("[data-refresh-seconds]");
+  if (refresher) {
+    var seconds = parseInt(refresher.getAttribute("data-refresh-seconds"), 10);
+    if (seconds >= 3 && seconds <= 120) {
+      window.setTimeout(function () {
+        if (document.visibilityState === "visible") location.reload();
+        else document.addEventListener("visibilitychange", function once() {
+          if (document.visibilityState === "visible") { document.removeEventListener("visibilitychange", once); location.reload(); }
+        });
+      }, seconds * 1000);
+    }
+  }
 })();

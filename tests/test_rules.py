@@ -3,7 +3,8 @@ from decimal import Decimal
 
 import pytest
 
-from app.bc_url import ConfigError, resolve_api_root
+from app.bc_entities import missing_required, parse_entity_sets, parse_overrides, resolve
+from app.bc_url import ConfigError, private_ip_host, resolve_api_root, scheme_allowed
 from app.checkpoint import advance_checkpoint
 from app.feeds import FeedClosed, MonoClient, StatementFileDrop
 from app.masking import mask_account_number
@@ -68,6 +69,44 @@ def test_sample_and_odata_urls_are_refused():
         resolve_api_root("https://10.250.50.9:7149/BC230", "/api/vgg/integration/v1.0")
         == "https://10.250.50.9:7149/BC230/api/vgg/integration/v1.0"
     )
+    assert private_ip_host("10.250.50.9")
+    assert not private_ip_host("bc.example.test")
+    assert not scheme_allowed("http://10.250.50.9:8048/BCTEST", False)
+    assert scheme_allowed("http://10.250.50.9:8048/BCTEST", True)
+    assert (
+        resolve_api_root("http://10.250.50.9:8048/BCTEST", "/api/vgg/integration/v1.0", True)
+        == "http://10.250.50.9:8048/BCTEST/api/vgg/integration/v1.0"
+    )
+    with pytest.raises(ConfigError):
+        resolve_api_root("http://bc.example.test/BCTEST", allow_private_http=True)
+
+
+def test_entity_set_names_match_exact_or_one_variant():
+    published = parse_entity_sets(
+        '<EntitySet Name="GLAccount"/><EntitySet Name="BankAccount"/><EntitySet Name="glEntries"/>'
+        '<EntitySet Name="generalLedgerSetups"/>'
+    )
+    matches = resolve(published)
+    by_logical = {item.logical: item for item in matches}
+    assert by_logical["glAccounts"].remote == "GLAccount"
+    assert by_logical["bankAccounts"].remote == "BankAccount"
+    assert by_logical["glEntries"].how == "exact"
+    assert by_logical["generalLedgerSetups"].how == "exact"
+    assert missing_required(matches) == []
+    bctest = resolve(
+        parse_entity_sets(
+            '<EntitySet Name="accounts"/><EntitySet Name="bankAccounts"/>'
+            '<EntitySet Name="generalLedgerEntries"/><EntitySet Name="bankLedgerEntry"/>'
+        ),
+        parse_overrides(
+            "glAccounts=accounts, glEntries=generalLedgerEntries, bankAccountLedgerEntries=bankLedgerEntry"
+        ),
+    )
+    assert missing_required(bctest) == []
+    overrides = parse_overrides("bankAccounts=BankAccount, glEntries=MissingThing")
+    overridden = {item.logical: item for item in resolve(published, overrides)}
+    assert overridden["bankAccounts"].how == "override"
+    assert overridden["glEntries"].how == "missing"
 
 
 def test_merge_does_not_invent_zero():

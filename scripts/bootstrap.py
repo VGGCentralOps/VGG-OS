@@ -114,6 +114,8 @@ def apply_migrations(name: str) -> None:
         psql(name, "/tmp/vggos-migrate/004_temp_db_login.sql")
     if "005_repository" not in applied:
         psql(name, "/tmp/vggos-migrate/005_repository.sql")
+    if "006_bank_ledger_and_write_scopes" not in applied:
+        psql(name, "/tmp/vggos-migrate/006_bank_ledger_and_write_scopes.sql")
     output = psql(name, "/tmp/vggos-pack/tests/001_regression.sql")
     if "FAILED:" in output:
         raise SystemExit(output)

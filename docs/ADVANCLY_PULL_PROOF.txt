@@ -1,0 +1,15 @@
+VGG OS — Advancly read-only pull proof
+Instance: BCTEST @ 10.250.50.9:8048
+Company: Advancly (74c0cf04-6359-ef11-a85a-7c1e52340759)
+Method: GET only, Basic auth
+
+accounts (glAccounts mapped): count=385
+  sample_key=28724f11-98ea-ee11-a837-002248a1c69d
+bankAccounts (bankAccounts): count=18
+  sample_key=B0001
+generalLedgerEntries (glEntries mapped): count=1009
+  sample_key=e7cbe9cd-155a-ef11-a85b-7c1e52340759
+bankLedgerEntry (bankAccountLedgerEntries mapped): count=57
+  sample_key=1
+
+Result: published Advancly sets are readable over VPN.

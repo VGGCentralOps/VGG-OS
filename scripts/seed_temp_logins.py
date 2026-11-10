@@ -6,6 +6,7 @@ Re-running keeps a password that is already in the secrets file and refreshes th
 from __future__ import annotations
 
 import os
+import secrets
 import sys
 from pathlib import Path
 
@@ -21,12 +22,20 @@ SECRETS = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "vggos" / "se
 
 ACCOUNT = {
     "password_key": "VGGOS_TEMP_ADMIN_PASSWORD",
+    "email_key": "VGGOS_TEMP_ADMIN_EMAIL",
     "email": "admin@vggos.local",
     "name": "Local admin",
     "subject": "temp-db:admin",
     "default_password": "vggos-local",
 }
-REMOVED_EMAILS = ("temp.operator@vggos.local", "temp.treasury@vggos.local")
+EXECUTIVE = {
+    "password_key": "VGGOS_TEMP_EXECUTIVE_PASSWORD",
+    "email_key": "VGGOS_TEMP_EXECUTIVE_EMAIL",
+    "email": "executive@vggos.local",
+    "name": "Local executive",
+    "subject": "temp-db:executive",
+}
+REMOVED_EMAILS = ("temp.operator@vggos.local", "temp.treasury@vggos.local", "ceo@vgg.tools")
 
 
 def read_env(path: Path) -> dict[str, str]:
@@ -51,10 +60,14 @@ def main() -> None:
     current = values.get(ACCOUNT["password_key"], "")
     password = current if len(current) >= 8 else ACCOUNT["default_password"]
     updates[ACCOUNT["password_key"]] = password
-    updates["VGGOS_TEMP_ADMIN_EMAIL"] = ACCOUNT["email"]
+    updates[ACCOUNT["email_key"]] = ACCOUNT["email"]
+    executive_password = values.get(EXECUTIVE["password_key"], "")
+    if len(executive_password) < 12:
+        executive_password = new_password()
+    updates[EXECUTIVE["password_key"]] = executive_password
+    updates[EXECUTIVE["email_key"]] = EXECUTIVE["email"]
     upsert_env(SECRETS, updates)
     with psycopg.connect(url) as conn:
-        seed_account(conn, ACCOUNT["email"], ACCOUNT["name"], ACCOUNT["subject"], password)
         for email in REMOVED_EMAILS:
             conn.execute(
                 """
@@ -65,10 +78,31 @@ def main() -> None:
             )
             conn.execute("DELETE FROM iam.finance_grant WHERE email = %s", (email,))
             conn.execute("DELETE FROM iam.temp_credential WHERE email = %s", (email,))
+        # Rebind if an older seed used the same subject under a different email.
+        conn.execute("DELETE FROM iam.temp_credential WHERE external_subject = %s AND email <> %s", (EXECUTIVE["subject"], EXECUTIVE["email"]))
+        conn.execute("DELETE FROM iam.finance_grant WHERE external_subject = %s AND email <> %s", (EXECUTIVE["subject"], EXECUTIVE["email"]))
+        seed_account(conn, ACCOUNT["email"], ACCOUNT["name"], ACCOUNT["subject"], password)
+        seed_account(conn, EXECUTIVE["email"], EXECUTIVE["name"], EXECUTIVE["subject"], executive_password)
         conn.commit()
     print("Temporary database sign-in is ready.")
     print(ACCOUNT["email"])
     print(f"Password is in {SECRETS} as {ACCOUNT['password_key']}")
+    print(EXECUTIVE["email"])
+    print(f"Password is in {SECRETS} as {EXECUTIVE['password_key']}")
+
+
+def new_password() -> str:
+    """A password that can be read aloud. Not written into git."""
+    words = (
+        "Amber", "Birch", "Cedar", "Delta", "Ember", "Fjord", "Granite", "Harbor",
+        "Indigo", "Juniper", "Kelvin", "Linden", "Marble", "North", "Orchid", "Pebble",
+        "Quartz", "Ridge", "Summit", "Timber",
+    )
+    first = secrets.choice(words)
+    second = secrets.choice(words)
+    while second == first:
+        second = secrets.choice(words)
+    return f"{first}-{second}-{secrets.randbelow(90) + 10}"
 
 
 def upsert_env(path: Path, updates: dict[str, str]) -> None:

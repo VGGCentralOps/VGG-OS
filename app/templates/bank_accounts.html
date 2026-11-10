@@ -1,98 +1,93 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% from "_chip.html" import chip %}
+{% from "_fmt.html" import when, n %}
 {% block title %}Bank accounts · VGG OS{% endblock %}
 {% block body %}
-<header class="page-header">
-  <div class="page-title">
-    <span class="tick" aria-hidden="true"></span>
-    <div>
-      <h1>Bank accounts</h1>
-      <p>{% if unmasked %}Account numbers are shown in full.{% else %}Account numbers are masked.{% endif %}</p>
-    </div>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Banks</p>
+    <h1>Bank accounts</h1>
+    <p class="lead">{% if unmasked %}Account numbers are shown in full for your grant.{% else %}Account numbers are masked unless your grant allows otherwise.{% endif %}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/bank-movements" data-prefetch>{{ icon('movements') }}Movements</a>
+    {% if can_export %}<a class="btn btn-secondary" href="/bank-accounts.csv">{{ icon('download') }}{% if unmasked %}Export{% else %}Export masked{% endif %}</a>{% endif %}
   </div>
 </header>
 
-<section class="section">
-  <div class="section-head"><h2>Register</h2></div>
-  {% if rows %}
-  <div class="section-body">
-    {% if can_export %}<p><a href="/bank-accounts.csv">{% if unmasked %}Export the register{% else %}Export the masked register{% endif %}</a></p>{% endif %}
+<section class="card">
+  <div class="card-head">
+    <div class="card-title">{{ icon('bank') }}<div><h2>Register</h2><p class="meta">Projected from Business Central bank accounts. Entries and last posting date come from loaded bank ledger lines.</p></div></div>
+    <form method="post" action="/bank-accounts/check">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button type="submit" class="btn btn-secondary btn-small">Run daily check</button>
+    </form>
   </div>
-  <div class="section-body flush">
-    <table class="stack">
+  {% if rows %}
+  <div class="table-wrap tall">
+    <table class="data">
       <thead>
         <tr>
           <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th><th>Business Central id</th>
-          <th>Accountable owner</th><th>Data route</th><th>Link status</th><th>List</th>
+          <th>Owner</th><th>Route</th><th>Link</th><th class="num">Entries</th><th>Last posted</th><th>List</th>
         </tr>
       </thead>
       <tbody>
         {% for row in rows %}
         <tr>
-          <td data-label="Owning entity">{{ row.entity_name }}</td>
-          <td data-label="Account" class="mono">{{ row.account_display }}</td>
-          <td data-label="Name">{{ row.bank_name }}</td>
-          <td data-label="Currency" class="mono">{{ row.currency_code }}</td>
-          <td data-label="Business Central id" class="mono">{{ row.bc_account_id }}</td>
-          <td data-label="Accountable owner" class="missing">{{ row.accountable_owner or "Not named" }}</td>
-          <td data-label="Data route">{{ chip('ready', row.data_route) }}</td>
-          <td data-label="Link status">{{ chip('waiting', row.link_status) }}</td>
-          <td data-label="List">{% if row.in_latest_bc_list %}In the latest list{% else %}Not in the latest list{% endif %}{% if not row.active %}, blocked{% endif %}</td>
+          <td>{{ row.entity_name }}</td>
+          <td class="mono">{{ row.account_display }}</td>
+          <td>{{ row.bank_name }}</td>
+          <td class="mono">{{ row.currency_code }}</td>
+          <td class="mono small">{{ row.bc_account_id }}</td>
+          <td class="muted">{{ row.accountable_owner or "Not named" }}</td>
+          <td>{{ chip('ready', row.data_route) }}</td>
+          <td>{{ chip('waiting', row.link_status) }}</td>
+          <td class="num"><a href="/bank-movements?account_id={{ row.bank_account_id }}">{{ n(row.entries) }}</a></td>
+          <td class="nowrap tabular">{{ when(row.last_posting_date, false) }}</td>
+          <td>{% if row.in_latest_bc_list %}In latest list{% else %}Not in latest list{% endif %}{% if not row.active %}, blocked{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <div class="section-body">
-    <p class="empty">No bank accounts are loaded.</p>
-  </div>
+  <div class="empty">{{ icon('inbox') }}<p>No bank accounts are loaded.</p></div>
   {% endif %}
-  <div class="section-body">
-    <form method="post" action="/bank-accounts/check">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}">
-      <button type="submit" class="btn btn-secondary">Run the daily check</button>
-    </form>
-  </div>
 </section>
 
-<section class="section">
-  <div class="section-head"><h2>In Business Central, no feed</h2></div>
-  <div class="section-body">
-    {% if grouped["IN_BC_NO_FEED"] %}
-    <ul>{% for task in grouped["IN_BC_NO_FEED"] %}<li>{{ chip('waiting', 'Open') }} {{ task.detail }}</li>{% endfor %}</ul>
-    {% else %}
-    <p>None.</p>
-    {% endif %}
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Feed with no Business Central account</h2></div>
-  <div class="section-body">
-    {% if grouped["FEED_WITHOUT_BC"] %}
-    <ul>{% for task in grouped["FEED_WITHOUT_BC"] %}<li>{{ chip('attention', 'Open') }} {{ task.detail }} <code>{{ task.feed_reference }}</code></li>{% endfor %}</ul>
-    {% else %}
-    <p>None.</p>
-    {% endif %}
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Linked but stale</h2></div>
-  <div class="section-body">
-    {% if grouped["LINKED_STALE"] %}
-    <ul>{% for task in grouped["LINKED_STALE"] %}<li>{{ chip('waiting', 'Open') }} {{ task.detail }}</li>{% endfor %}</ul>
-    {% else %}
-    <p>None.</p>
-    {% endif %}
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Dormancy</h2></div>
-  <div class="section-body">
-    <p>No account is flagged dormant.</p>
-  </div>
-</section>
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>In Business Central, no feed</h2></div></div>
+    <div class="card-body">
+      {% if grouped["IN_BC_NO_FEED"] %}
+      <ul class="list-plain">{% for task in grouped["IN_BC_NO_FEED"] %}<li>{{ chip('waiting', 'Open') }}<span class="grow">{{ task.detail }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="empty-inline">None.</p>{% endif %}
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>Feed with no Business Central account</h2></div></div>
+    <div class="card-body">
+      {% if grouped["FEED_WITHOUT_BC"] %}
+      <ul class="list-plain">{% for task in grouped["FEED_WITHOUT_BC"] %}<li>{{ chip('attention', 'Open') }}<span class="grow">{{ task.detail }} <code>{{ task.feed_reference }}</code></span></li>{% endfor %}</ul>
+      {% else %}<p class="empty-inline">None.</p>{% endif %}
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><div class="card-title">{{ icon('clock') }}<h2>Linked but stale</h2></div></div>
+    <div class="card-body">
+      {% if grouped["LINKED_STALE"] %}
+      <ul class="list-plain">{% for task in grouped["LINKED_STALE"] %}<li>{{ chip('waiting', 'Open') }}<span class="grow">{{ task.detail }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="empty-inline">None.</p>{% endif %}
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><div class="card-title">{{ icon('shield') }}<h2>Dormancy</h2></div></div>
+    <div class="card-body">
+      <p class="empty-inline">No account is flagged dormant.</p>
+      {% if rule %}<p class="muted small mt">Stored rule remains disabled until Treasury signs thresholds.</p>{% endif %}
+    </div>
+  </section>
+</div>
 {% endblock %}

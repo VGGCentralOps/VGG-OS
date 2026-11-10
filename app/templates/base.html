@@ -1,99 +1,126 @@
+{%- from "_icons.html" import icon -%}
+{%- set path = request.url.path -%}
+{%- set can_books = "books:read" in scopes -%}
+{%- set can_bank = "bank:read" in scopes -%}
+{%- set initials = ((principal_name or "").split()|map("first")|join)[:2]|upper -%}
+{%- macro navlink(href, label, name, active, cls="") -%}
+<a href="{{ href }}" class="{{ cls }}{% if active %} is-active{% endif %}" data-prefetch{% if active %} aria-current="page"{% endif %} title="{{ label }}">{{ icon(name) }}<span class="nav-text">{{ label }}</span></a>
+{%- endmacro -%}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="same-origin">
   <title>{% block title %}VGG OS{% endblock %}</title>
-  <meta name="theme-color" content="#EDF9FD">
+  <meta name="theme-color" content="#eaf3ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1613" media="(prefers-color-scheme: dark)">
+  <link rel="preload" href="/static/fonts/outfit-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/outfit-600.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/app.css?v=3">
+  <script src="/static/nav.js?v=3" defer></script>
 </head>
-<body>
-{% set path = request.url.path %}
-<div class="portal-shell">
-  <aside class="sidebar">
+<body class="app">
+<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
+<div class="shell">
+  <aside class="sidebar glass" aria-label="Main navigation">
     <div class="brand-row">
-      <img class="logo" src="/static/vgg-logo.webp" alt="">
-      <div>
+      <img class="logo" src="/static/vgg-logo.webp" alt="" width="40" height="28">
+      <div class="brand-text">
         <a class="wordmark" href="/">VGG OS</a>
-        <span class="role">Finance</span>
+        <span class="brand-sub">Finance</span>
       </div>
+      <button type="button" class="collapse-btn" data-collapse aria-label="Collapse navigation" aria-expanded="true">{{ icon('chevron-left') }}</button>
     </div>
     <nav class="side-nav" aria-label="Primary">
-      {% if "books:read" in scopes %}
-      <a href="/" class="{% if path == '/' %}is-active{% endif %}" {% if path == '/' %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-        Overview
-      </a>
-      <a href="/books" class="{% if path == '/books' %}is-active{% endif %}" {% if path == '/books' %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
-        Books
-      </a>
-      <a href="/trial-balance" class="{% if path == '/trial-balance' %}is-active{% endif %}" {% if path == '/trial-balance' %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
-        Trial balance
-      </a>
-      <a href="/repositories" class="{% if path.startswith('/repositories') %}is-active{% endif %}" {% if path.startswith('/repositories') %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-        Repositories
-      </a>
+      {% if can_books %}
+      <div class="nav-group">
+        <span class="nav-label">Books</span>
+        {{ navlink("/", "Overview", "overview", path == "/") }}
+        {{ navlink("/books", "Books", "books", path.startswith("/books")) }}
+        {{ navlink("/trial-balance", "Trial balance", "scale", path.startswith("/trial-balance")) }}
+      </div>
       {% endif %}
-      {% if "bank:read" in scopes %}
-      <a href="/bank-accounts" class="{% if path == '/bank-accounts' %}is-active{% endif %}" {% if path == '/bank-accounts' %}aria-current="page"{% endif %}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
-        Bank accounts
-      </a>
+      {% if can_bank %}
+      <div class="nav-group">
+        <span class="nav-label">Banks</span>
+        {{ navlink("/bank-accounts", "Bank accounts", "bank", path.startswith("/bank-accounts")) }}
+        {{ navlink("/bank-movements", "Movements", "movements", path.startswith("/bank-movements")) }}
+      </div>
+      {% endif %}
+      {% if can_books %}
+      <div class="nav-group">
+        <span class="nav-label">Library</span>
+        {{ navlink("/repositories", "Repositories", "folder", path.startswith("/repositories")) }}
+      </div>
       {% endif %}
     </nav>
-    <div class="side-rule"></div>
     <div class="side-foot">
-      {% if principal_name %}<div class="who">{{ principal_name }}<span>Signed in</span></div>{% endif %}
+      {% if principal_name %}
+      <div class="who" title="{{ principal_name }}">
+        <span class="avatar" aria-hidden="true">{{ initials or "?" }}</span>
+        <span class="who-text"><span class="who-name">{{ principal_name }}</span><span class="who-meta">Signed in</span></span>
+      </div>
+      {% endif %}
       <form method="post" action="/logout">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
-        <button type="submit" class="sidebar-button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-          Sign out
-        </button>
+        <button type="submit" class="signout" title="Sign out">{{ icon('logout') }}<span class="nav-text">Sign out</span></button>
       </form>
     </div>
   </aside>
-  <div class="portal-column">
-    <header class="mobile-bar">
-      <img class="logo" src="/static/vgg-logo.webp" alt="">
-      <a class="wordmark" href="/">VGG OS</a>
-    </header>
-    <div class="portal-scroll scroll">
-      <div class="canvas">
-        <div class="portal-page">
-          {% block body %}{% endblock %}
-        </div>
+
+  <div class="main">
+    <header class="topbar glass">
+      <a class="mobile-brand" href="/"><img class="logo" src="/static/vgg-logo.webp" alt="" width="34" height="24"><span class="wordmark">VGG OS</span></a>
+      <div class="topbar-status">
+        {% if bc_state == "configured" %}
+        <span class="chip chip-ok" title="Business Central credentials are configured on the server"><span class="dot" aria-hidden="true"></span><span class="chip-label-long">Business Central&nbsp;</span>configured</span>
+        {% else %}
+        <span class="chip chip-warn" title="Business Central credentials are not configured on the server"><span class="dot" aria-hidden="true"></span><span class="chip-label-long">Business Central&nbsp;</span>not configured</span>
+        {% endif %}
+        {% if can_bank %}
+        {% if unmasked %}<span class="chip chip-attention" title="Your account sees full account numbers">{{ icon('shield') }}Unmasked</span>
+        {% else %}<span class="chip" title="Account numbers are masked">{{ icon('lock') }}Masked</span>{% endif %}
+        {% endif %}
       </div>
-    </div>
-    <nav class="tabbar" aria-label="Primary">
-      {% if "books:read" in scopes %}
-      <a href="/" class="{% if path == '/' %}is-active{% endif %}">Overview</a>
-      <a href="/books" class="{% if path == '/books' %}is-active{% endif %}">Books</a>
-      <a href="/trial-balance" class="{% if path == '/trial-balance' %}is-active{% endif %}">Trial balance</a>
-      {% endif %}
-      {% if "bank:read" in scopes %}
-      <a href="/bank-accounts" class="{% if path == '/bank-accounts' %}is-active{% endif %}">Banks</a>
-      {% endif %}
-      <details class="more">
-        <summary>More</summary>
-        <div class="more-sheet">
-          <img class="logo" src="/static/vgg-logo.webp" alt="">
-          {% if "books:read" in scopes %}<a href="/repositories">Repositories</a>{% endif %}
-          <form method="post" action="/logout">
-            <input type="hidden" name="csrf_token" value="{{ csrf }}">
-            <button type="submit" class="sidebar-button">Sign out</button>
-          </form>
-        </div>
-      </details>
-    </nav>
+    </header>
+    <main id="main" class="content" tabindex="-1">
+      {% block body %}{% endblock %}
+    </main>
   </div>
 </div>
-<script src="/static/nav.js" defer></script>
+
+<nav class="tabbar" aria-label="Primary">
+  {% if can_books %}
+  {{ navlink("/", "Overview", "overview", path == "/") }}
+  {{ navlink("/books", "Books", "books", path.startswith("/books")) }}
+  {{ navlink("/trial-balance", "Trial bal.", "scale", path.startswith("/trial-balance")) }}
+  {% endif %}
+  {% if can_bank %}
+  {{ navlink("/bank-accounts", "Banks", "bank", path.startswith("/bank-accounts")) }}
+  {% endif %}
+  <details class="more">
+    <summary>{{ icon('more') }}<span>More</span></summary>
+    <div class="more-sheet">
+      {% if principal_name %}
+      <div class="who">
+        <span class="avatar" aria-hidden="true">{{ initials or "?" }}</span>
+        <span class="who-text"><span class="who-name">{{ principal_name }}</span><span class="who-meta">Signed in</span></span>
+      </div>
+      {% endif %}
+      {% if can_bank %}{{ navlink("/bank-movements", "Bank movements", "movements", path.startswith("/bank-movements")) }}{% endif %}
+      {% if can_books %}{{ navlink("/repositories", "Repositories", "folder", path.startswith("/repositories")) }}{% endif %}
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button type="submit" class="signout">{{ icon('logout') }}<span>Sign out</span></button>
+      </form>
+    </div>
+  </details>
+</nav>
 </body>
 </html>

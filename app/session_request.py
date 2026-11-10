@@ -21,7 +21,7 @@ from app.session_store import (
     session_view,
     unseal,
 )
-from app.temp_login import ALL_SCOPES, is_temp_token
+from app.temp_login import is_temp_token, temp_session_still_allowed
 
 log = logging.getLogger("vggos")
 _LOCKS: dict[str, threading.Lock] = {}
@@ -64,6 +64,14 @@ def _lock_for(session_id: str) -> threading.Lock:
     with _LOCKS_GUARD:
         lock = _LOCKS.get(session_id)
         if lock is None:
+            if len(_LOCKS) > 5000:
+                # Drop locks nobody holds so a stream of random cookies cannot grow this forever.
+                for stale in [name for name, item in _LOCKS.items() if not item.locked()]:
+                    _LOCKS.pop(stale, None)
+            if len(_SESSION_CACHE) > 5000:
+                now = time.monotonic()
+                for stale in [name for name, item in _SESSION_CACHE.items() if item[0] <= now]:
+                    _SESSION_CACHE.pop(stale, None)
             lock = threading.Lock()
             _LOCKS[session_id] = lock
         return lock
@@ -96,7 +104,10 @@ def resolve_session(cookie: str, settings, appraisal, jwks, db) -> Resolved:
                     forget_session(cookie)
                     return _drop(conn, cookie, "OS session ended.")
                 if _temporary_session(key, row):
-                    view = session_view(row, ALL_SCOPES)
+                    if not temp_session_still_allowed(conn, settings, row["external_subject"]):
+                        forget_session(cookie)
+                        return _drop(conn, cookie, "Temporary sign-in is switched off or revoked. The OS session was deleted.")
+                    view = session_view(row, scopes_for(conn, row["external_subject"]))
                     conn.commit()
                     found = Resolved(session=view)
                     _remember(cookie, found)
@@ -116,7 +127,9 @@ def resolve_session(cookie: str, settings, appraisal, jwks, db) -> Resolved:
                 scopes = scopes_for(conn, row["external_subject"])
                 view = session_view(row, scopes)
                 conn.commit()
-                return Resolved(session=view)
+                found = Resolved(session=view)
+                _remember(cookie, found)
+                return found
         except Exception:
             log.warning("The OS session could not be read.")
             return Resolved(clear_cookie=True)

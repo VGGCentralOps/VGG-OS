@@ -1,13 +1,12 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Repositories · VGG OS{% endblock %}
 {% block body %}
-<header class="page-header">
-  <div class="page-title">
-    <span class="tick" aria-hidden="true"></span>
-    <div>
-      <h1>Repositories</h1>
-      <p>Reports and working files, in the folders they were filed in.</p>
-    </div>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Library</p>
+    <h1>Repositories</h1>
+    <p class="lead">Prepared Finance reports and working files. These are not ledger facts from Business Central.</p>
   </div>
 </header>
 
@@ -27,77 +26,77 @@
 </nav>
 
 {% if notice %}
-<section class="callout"><p>{{ notice }}</p></section>
+<section class="callout callout-warn"><p>{{ notice }}</p></section>
 {% endif %}
 
-<section class="section">
-  <div class="section-head">
-    <h2>{% if folder %}{{ folder.name }}{% else %}All folders{% endif %}</h2>
-    <p>{{ nodes|length }} item{% if nodes|length != 1 %}s{% endif %} in this folder.</p>
+<section class="card">
+  <div class="card-head">
+    <div class="card-title">{{ icon('folder') }}<div><h2>{% if folder %}{{ folder.name }}{% else %}All folders{% endif %}</h2><p class="meta">{{ nodes|length }} item{% if nodes|length != 1 %}s{% endif %} in this folder.</p></div></div>
   </div>
-  <div class="section-body flush">
-    {% if nodes %}
-    <table class="stack">
+  {% if nodes %}
+  <div class="table-wrap mid">
+    <table class="data">
       <thead>
-        <tr><th>Name</th><th>Kind</th><th>Size</th><th></th></tr>
+        <tr><th>Name</th><th>Kind</th><th>Size</th>{% if can_write %}<th></th>{% endif %}</tr>
       </thead>
       <tbody>
         {% for node in nodes %}
         <tr>
-          <td data-label="Name">
+          <td>
             {% if node.kind == 'folder' %}
-            <a href="/repositories/{{ node.id }}">{{ node.name }}</a>
+            <a class="entry" href="/repositories/{{ node.id }}" data-prefetch>{{ icon('folder') }}<span>{{ node.name }}</span></a>
             {% else %}
-            <a href="/repositories/{{ node.id }}/file">{{ node.name }}</a>
+            <a class="entry" href="/repositories/{{ node.id }}/file">{{ icon('file') }}<span>{{ node.name }}</span></a>
             {% endif %}
           </td>
-          <td data-label="Kind">{{ "Folder" if node.kind == "folder" else "File" }}</td>
-          <td data-label="Size">{{ node.size_label or "—" }}</td>
-          <td data-label="Remove">
+          <td>{{ "Folder" if node.kind == "folder" else "File" }}</td>
+          <td>{{ node.size_label or "—" }}</td>
+          {% if can_write %}
+          <td>
             <form method="post" action="/repositories/{{ node.id }}/delete" onsubmit="return confirm('{% if node.kind == 'folder' %}Delete this folder and everything inside it?{% else %}Delete this file?{% endif %}')">
               <input type="hidden" name="csrf_token" value="{{ csrf }}">
               <button type="submit" class="btn btn-secondary btn-small">Delete</button>
             </form>
           </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="section-body">
-      <p class="empty">This folder is empty. Add a file below.</p>
+  </div>
+  {% else %}
+  <div class="empty">{{ icon('inbox') }}<p>This folder is empty.{% if can_write %} Add a file below.{% endif %}</p></div>
+  {% endif %}
+</section>
+
+{% if can_write %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><div class="card-title">{{ icon('file') }}<div><h2>Add a file here</h2><p class="meta">Excel, PowerPoint, Word, PDF, CSV, or an image. Up to 50 MB.</p></div></div>
+    <div class="card-body">
+      <form method="post" action="/repositories/upload" enctype="multipart/form-data" class="file-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
+        <label class="field">File<input type="file" name="upload" required></label>
+        <button type="submit" class="btn btn-primary">Add file</button>
+      </form>
     </div>
-    {% endif %}
-  </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><div class="card-title">{{ icon('folder') }}<div><h2>New folder</h2><p class="meta">Creates a folder in the one you have open.</p></div></div>
+    <div class="card-body">
+      <form method="post" action="/repositories/folder" class="file-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
+        <label class="field">Name<input type="text" name="name" maxlength="240" required></label>
+        <button type="submit" class="btn btn-secondary">Create folder</button>
+      </form>
+    </div>
+  </section>
+</div>
+{% else %}
+<section class="card">
+  <div class="card-body"><p class="empty-inline">Your account can browse files but cannot upload, create folders, or delete.</p></div>
 </section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>Add a file here</h2>
-    <p>Excel, PowerPoint, Word, PDF, CSV, or an image. Up to 50 MB.</p>
-  </div>
-  <div class="section-body">
-    <form method="post" action="/repositories/upload" enctype="multipart/form-data" class="file-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}">
-      {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
-      <label>File<input type="file" name="upload" required></label>
-      <button type="submit" class="btn btn-primary">Add file</button>
-    </form>
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>New folder</h2>
-    <p>Creates a folder in the one you have open.</p>
-  </div>
-  <div class="section-body">
-    <form method="post" action="/repositories/folder" class="file-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}">
-      {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
-      <label>Name<input type="text" name="name" maxlength="240" required></label>
-      <button type="submit" class="btn btn-secondary">Create folder</button>
-    </form>
-  </div>
-</section>
+{% endif %}
 {% endblock %}

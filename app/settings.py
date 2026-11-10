@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,6 +46,19 @@ class Settings:
     auth_anon_key: str
     token_key: str
     temp_db_login: bool
+    bc_allow_private_http: bool = False
+    bc_entity_map: str = ""
+    trusted_proxy_hops: int = 0
+    bc_company_id: str = ""
+
+    def company_key(self) -> str:
+        """The Advancly id to match in the companies list. Never chosen by name."""
+        from app.constants import ADVANCLY_COMPANY_ID
+
+        value = (self.bc_company_id or "").strip().lower()
+        if re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", value):
+            return value
+        return ADVANCLY_COMPANY_ID
 
     def secret_values(self) -> list[str]:
         return [
@@ -66,14 +80,14 @@ class Settings:
     def connection_blockers(self) -> list[str]:
         blockers = []
         if not self.bc_base_url:
-            blockers.append("HTTPS base URL from Elijah. The HTTP address opened in the browser is not used.")
+            blockers.append("Business Central base URL (VGGOS_BC_BASE_URL) in the server secrets file.")
             try:
                 normalise_api_route(self.bc_api_route)
             except ConfigError as exc:
                 blockers.append(str(exc))
         else:
             try:
-                resolve_api_root(self.bc_base_url, self.bc_api_route)
+                resolve_api_root(self.bc_base_url, self.bc_api_route, self.bc_allow_private_http)
             except ConfigError as exc:
                 blockers.append(str(exc))
         if not self.bc_auth_method:
@@ -94,11 +108,18 @@ class Settings:
         blockers = self.connection_blockers()
         if blockers:
             raise ConfigError("Business Central is not being called. " + " ".join(blockers))
-        return resolve_api_root(self.bc_base_url, self.bc_api_route)
+        return resolve_api_root(self.bc_base_url, self.bc_api_route, self.bc_allow_private_http)
 
 
 def _enabled(value: str) -> bool:
     return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _hops(value: str) -> int:
+    try:
+        return max(0, min(3, int(value.strip() or "0")))
+    except ValueError:
+        return 0
 
 
 def load_settings() -> Settings:
@@ -127,6 +148,10 @@ def load_settings() -> Settings:
         auth_anon_key=pick("VGG_AUTH_ANON_KEY"),
         token_key=pick("VGGOS_TOKEN_KEY"),
         temp_db_login=_enabled(pick("VGGOS_TEMP_DB_LOGIN", "1")),
+        bc_allow_private_http=pick("VGGOS_BC_ALLOW_PRIVATE_HTTP", "0").strip() == "1",
+        bc_entity_map=pick("VGGOS_BC_ENTITY_MAP"),
+        trusted_proxy_hops=_hops(pick("VGGOS_TRUSTED_PROXY_HOPS", "0")),
+        bc_company_id=pick("VGGOS_BC_COMPANY_ID"),
     )
     if len(settings.session_secret) < 16:
         raise RuntimeError(f"Session secret is missing. Expected it in {path}.")

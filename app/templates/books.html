@@ -1,83 +1,262 @@
 {% extends "base.html" %}
-{% from "_chip.html" import chip %}
+{% from "_icons.html" import icon %}
+{% from "_chip.html" import chip, run_chip %}
+{% from "_fmt.html" import when, n %}
 {% block title %}Books · VGG OS{% endblock %}
 {% block body %}
-<header class="page-header">
-  <div class="page-title">
-    <span class="tick" aria-hidden="true"></span>
-    <div>
-      <h1>Books</h1>
-      <p>Ledger sync for {{ expected_name }}.</p>
-    </div>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Books</p>
+    <h1>Business Central sync</h1>
+    <p class="lead">Read-only ledger pull for every company on the configured instance.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/trial-balance" data-prefetch>{{ icon('scale') }}Trial balance</a>
   </div>
 </header>
 
-{% if not blockers %}
-<section class="section">
-  <div class="section-head"><h2>Sync</h2></div>
-  <div class="section-body">
-    <form method="post" action="/sync" class="fields">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}">
-      <label>Posting date from <input type="date" name="date_from" required></label>
-      <label>Posting date to <input type="date" name="date_to" required></label>
-      <label>Reconciliation year <input name="year" inputmode="numeric" required placeholder="YYYY"></label>
-      <label>Reconciliation month <input name="month" inputmode="numeric" required placeholder="1–12"></label>
-      <button type="submit" class="btn btn-primary" {% if sync_running %}disabled{% endif %}>Run sync</button>
-    </form>
-    {% if sync_running %}<p>A sync is running.</p><meta http-equiv="refresh" content="5">{% endif %}
-  </div>
-</section>
+{% if sync_running %}
+<div class="callout callout-ok" data-refresh-seconds="5" role="status">
+  {{ icon('refresh') }}<p><strong>A pull is running.</strong> This page refreshes every few seconds until it finishes.</p>
+</div>
 {% endif %}
 
-{% if probe %}
-<section class="section">
-  <div class="section-head"><h2>Latest company check</h2><p>{{ probe.message }}</p></div>
-  {% if probe.companies %}
-  <div class="section-body flush">
-    <table class="stack">
-      <thead><tr><th>Name</th><th>Company id</th></tr></thead>
-      <tbody>
-        {% for company in probe.companies %}
-        <tr>
-          <td data-label="Name">{{ company.name or "Name missing" }}</td>
-          <td data-label="Company id" class="mono">{{ company.id }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<section class="kpis" aria-label="Loaded books">
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
+    <span class="kpi-value">{{ n(totals.companies) }}</span>
   </div>
-  {% endif %}
-</section>
-{% endif %}
-
-<section class="section">
-  <div class="section-head"><h2>Sync runs</h2></div>
-  {% if runs %}
-  <div class="section-body flush">
-    <table class="stack">
-      <thead>
-        <tr><th>Run</th><th>Stream</th><th>Status</th><th>Read</th><th>Accepted</th><th>Rejected</th><th>Checkpoint</th><th>Error</th></tr>
-      </thead>
-      <tbody>
-        {% for run in runs %}
-        <tr>
-          <td data-label="Run" class="mono">{{ run.id }}</td>
-          <td data-label="Stream">{{ run.endpoint_code or "—" }}</td>
-          {% set kind = 'done' if run.status == 'SUCCEEDED' else ('attention' if run.status == 'FAILED' else ('moving' if run.status == 'RUNNING' else 'waiting')) %}
-          <td data-label="Status">{{ chip(kind, run.status) }}</td>
-          <td data-label="Read" class="num">{{ run.rows_read }}</td>
-          <td data-label="Accepted" class="num">{{ run.rows_accepted }}</td>
-          <td data-label="Rejected" class="num">{{ run.rows_rejected }}</td>
-          <td data-label="Checkpoint" class="mono">{{ run.committed_checkpoint }}</td>
-          <td data-label="Error">{{ run.error_summary or "" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">G/L accounts</span><span class="kpi-icon">{{ icon('list') }}</span></span>
+    <span class="kpi-value">{{ n(totals.accounts) }}</span>
   </div>
-  {% else %}
-  <div class="section-body"><p class="empty">No sync has run.</p></div>
-  {% endif %}
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Bank accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
+    <span class="kpi-value">{{ n(totals.bank_accounts) }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">G/L entries</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
+    <span class="kpi-value">{{ n(totals.gl_entries) }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-top"><span class="kpi-label">Bank ledger</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
+    <span class="kpi-value">{{ n(totals.bank_ledger_entries) }}</span>
+  </div>
 </section>
 
+<div class="grid-main-aside">
+  <div class="stack-gap">
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('play') }}<div><h2>Run a pull</h2><p class="meta">Chart of accounts, bank accounts, ledger and bank entries for a date range, then a check against Business Central for one month.</p></div></div>
+      </div>
+      <div class="card-body">
+        {% if not can_sync %}
+        <p class="empty-inline">Your account can view runs but cannot start a pull.</p>
+        {% elif blockers %}
+        <div class="callout callout-warn">
+          {{ icon('alert') }}
+          <div>
+            <p><strong>Business Central is not called from this server yet.</strong></p>
+            <ul>{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>
+          </div>
+        </div>
+        {% else %}
+        <form method="post" action="/sync" class="fields">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <label class="field">Scope
+            <select name="scope">
+              <option value="all" selected>All companies on the instance</option>
+              <option value="one">{{ expected_name }} only</option>
+            </select>
+          </label>
+          <label class="field">Posting date from<input type="date" name="date_from" value="2023-12-01" required></label>
+          <label class="field">Posting date to<input type="date" name="date_to" value="2026-09-30" required></label>
+          <label class="field">Check year<input type="number" name="year" inputmode="numeric" min="2000" max="2100" value="2025" required placeholder="YYYY"></label>
+          <label class="field">Check month<input type="number" name="month" inputmode="numeric" min="1" max="12" value="1" required placeholder="1–12"></label>
+          <div class="span-all split">
+            <p class="muted small">GET only. The checkpoint moves only after a run commits.</p>
+            <button type="submit" class="btn btn-primary" data-busy="Starting…" {% if sync_running %}disabled{% endif %}>{{ icon('play') }}<span data-label>Run pull</span></button>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card" id="companies">
+      <div class="card-head">
+        <div class="card-title">{{ icon('books') }}<div><h2>Companies</h2><p class="meta">Loaded from Business Central</p></div></div>
+      </div>
+      {% if companies %}
+      <div class="table-wrap tall">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Code</th>
+              <th>Company id</th>
+              <th class="num">Accounts</th>
+              <th class="num">Banks</th>
+              <th class="num">G/L</th>
+              <th class="num">Bank ledger</th>
+              <th>G/L dates</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in companies %}
+            <tr>
+              <td>{{ row.entity_name }}</td>
+              <td class="mono small">{{ row.entity_code }}</td>
+              <td class="mono small">{{ row.external_company_key }}</td>
+              <td class="num">{{ n(row.accounts or 0) }}</td>
+              <td class="num">{{ n(row.bank_accounts or 0) }}</td>
+              <td class="num">{{ n(row.gl_entries or 0) }}</td>
+              <td class="num">{{ n(row.bank_ledger_entries or 0) }}</td>
+              <td class="nowrap tabular">{% if row.gl_from %}{{ row.gl_from }} → {{ row.gl_to }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">{{ icon('inbox') }}<p>No companies loaded yet. Run a pull.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="card" id="entity-sets">
+      <div class="card-head">
+        <div class="card-title">{{ icon('list') }}<div><h2>Entity sets</h2><p class="meta">Master-record counts. Missing streams stay empty on purpose.</p></div></div>
+      </div>
+      <div class="table-wrap mid">
+        <table class="data">
+          <thead><tr><th>Entity set</th><th class="num">Rows</th><th>State</th></tr></thead>
+          <tbody>
+            {% for row in dataset_counts %}
+            <tr>
+              <td class="mono">{{ row.entity_set }}</td>
+              <td class="num">{{ n(row.n) }}</td>
+              <td>{% if row.n %}{{ chip('ok', 'Loaded') }}{% else %}{{ chip('warn', 'Empty') }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('list') }}<div><h2>Sync runs</h2><p class="meta">{{ runs|length }} most recent</p></div></div>
+      </div>
+      {% if runs %}
+      <div class="table-wrap tall">
+        <table class="data">
+          <thead>
+            <tr><th>Run</th><th>Company</th><th>Stream</th><th>Status</th><th>Started</th><th class="num">Read</th><th class="num">Accepted</th><th class="num">Rejected</th><th>Checkpoint</th><th>Error</th></tr>
+          </thead>
+          <tbody>
+            {% for run in runs %}
+            <tr>
+              <td class="mono">{{ run.id }}</td>
+              <td>{{ run.company_name or "—" }}</td>
+              <td class="nowrap">{{ run.endpoint_code or "—" }}</td>
+              <td>{{ run_chip(run.status) }}</td>
+              <td class="nowrap tabular">{{ when(run.started_at) }}</td>
+              <td class="num">{{ n(run.rows_read) }}</td>
+              <td class="num">{{ n(run.rows_accepted) }}</td>
+              <td class="num">{{ n(run.rows_rejected) }}</td>
+              <td class="mono small">{% if run.committed_checkpoint is mapping and run.committed_checkpoint %}{% for key, value in run.committed_checkpoint|dictsort %}{{ key }}={{ value }}{% if not loop.last %} · {% endif %}{% endfor %}{% else %}—{% endif %}</td>
+              <td class="wrap">{{ run.error_summary or "" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">{{ icon('inbox') }}<p>No sync has run.</p></div>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack-gap" aria-label="Connection">
+    <section class="card">
+      <div class="card-head"><div class="card-title">{{ icon('database') }}<h2>Connection</h2></div></div>
+      <div class="card-body">
+        <dl class="kv">
+          <dt>Status</dt><dd>{% if bc_state == "configured" %}{{ chip('ok', 'Configured') }}{% else %}{{ chip('warn', 'Not configured') }}{% endif %}</dd>
+          <dt>Default company</dt><dd>{{ expected_name }}</dd>
+          <dt>Company id</dt><dd class="mono small">{{ expected_id }}</dd>
+          <dt>Secret</dt><dd class="mono small">{{ secret_reference }}</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div class="card-title">{{ icon('terminal') }}<h2>Pull over the VPN</h2></div></div>
+      <div class="card-body">
+        <p class="small muted">Pulls run from the machine connected to the VGG VPN:</p>
+        <code class="cmd mt">python scripts/pull_books.py --from 2023-12-01 --to 2026-09-30 --check-month 2025-01</code>
+      </div>
+    </section>
+
+    {% if entity_sets is defined and entity_sets %}
+    <section class="card">
+      <div class="card-head"><div class="card-title">{{ icon('list') }}<h2>Business Central tables</h2></div></div>
+      <div class="card-body">
+        <ul class="list-plain">
+          {% for item in entity_sets %}
+          <li>
+            <span class="grow"><span class="mono">{{ item.logical }}</span>{% if item.remote and item.remote != item.logical %}<span class="cell-sub mono">→ {{ item.remote }}</span>{% endif %}</span>
+            {% if item.found %}{{ chip('ok', 'Found') }}{% elif item.required %}{{ chip('attention', 'Missing') }}{% else %}{{ chip('warn', 'Skipped') }}{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if probe %}
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('check') }}<h2>Latest company check</h2></div>
+        {% if probe.matched %}{{ chip('ok', 'Matched') }}{% else %}{{ chip('attention', 'Not matched') }}{% endif %}
+      </div>
+      <div class="card-body">
+        <p class="small">{{ probe.message }}</p>
+        <p class="small muted mt">{{ when(probe.probed_at) }}</p>
+      </div>
+      {% if probe.companies %}
+      <div class="table-wrap mid">
+        <table class="data">
+          <thead><tr><th>Name</th><th>Company id</th></tr></thead>
+          <tbody>
+            {% for company in probe.companies %}
+            <tr>
+              <td>{{ company.name or "Name missing" }}</td>
+              <td class="mono small">{{ company.id }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if dimensions %}
+    <section class="card">
+      <div class="card-head"><div class="card-title">{{ icon('filter') }}<h2>Cost and revenue centres</h2></div></div>
+      <div class="table-wrap mid">
+        <table class="data">
+          <thead><tr><th>Kind</th><th>Code</th><th>Name</th></tr></thead>
+          <tbody>
+            {% for kind, code, name in dimensions %}
+            <tr><td>{{ kind }}</td><td class="mono">{{ code }}</td><td>{{ name }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+  </aside>
+</div>
 {% endblock %}

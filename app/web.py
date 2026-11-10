@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 from psycopg.types.json import Json
 
 from app.appraisal import default_client
-from app.constants import ADVANCLY_COMPANY_ID, ADVANCLY_DIMENSION_CODES, ADVANCLY_WORKBOOK_NAME, SQL_PACK_VERSION
+from app.constants import ADVANCLY_DIMENSION_CODES, ADVANCLY_WORKBOOK_NAME, SQL_PACK_VERSION
 from app.db import app_connection
 from app.feeds import FeedClosed, MonoClient, StatementFileDrop
 from app.iam_config import CSRF_COOKIE, SESSION_COOKIE, AuthKeyRefused, require_anon_key
@@ -24,12 +24,18 @@ from app.jwks import JwksCache
 from app.login_flow import cookie_is_secure, establish_session, issue_form_csrf, read_sign_in, same
 from app.queries import (
     advancly_bank_count,
+    bank_movements,
     dormancy_rule,
+    last_run,
     latest_probe,
     loaded_months,
+    movement_accounts,
+    movement_count,
+    movement_months,
     open_task_count,
     open_tasks,
     register_rows,
+    books_inventory,
     sync_runs,
     trial_balance,
 )
@@ -161,13 +167,16 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         return response
 
     def page(request: Request, session: SessionView, name: str, **context):
+        scopes = session.scopes
         context.update(
             {
                 "request": request,
                 "csrf": session.csrf,
-                "scopes": sorted(session.scopes),
-                "can_export": "export" in session.scopes,
-                "unmasked": "bank:unmask" in session.scopes,
+                "scopes": sorted(scopes),
+                "can_export": "export" in scopes,
+                "can_sync": "books:sync" in scopes,
+                "can_write": "files:write" in scopes,
+                "unmasked": "bank:unmask" in scopes,
                 "principal_name": session.display_name,
                 "sql_pack": SQL_PACK_VERSION,
                 "bc_state": current.bc_state(),
@@ -280,6 +289,8 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 "bank_count": advancly_bank_count(conn),
                 "task_count": open_task_count(conn),
                 "file_count": file_count(conn),
+                "movement_count": movement_count(conn),
+                "last_run": last_run(conn),
             }
         return page(request, session, "overview.html", **payload)
 
@@ -290,15 +301,22 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             return session
         with db() as conn:
             runs = sync_runs(conn)
+            probe = latest_probe(conn)
+            inventory = books_inventory(conn)
+            entity_sets = None
+            if probe and isinstance(probe.get("entity_sets"), dict):
+                entity_sets = probe["entity_sets"].get("matches")
             payload = {
                 "runs": runs,
-                "probe": latest_probe(conn),
+                "probe": probe,
+                "entity_sets": entity_sets,
                 "blockers": current.connection_blockers(),
-                "expected_id": ADVANCLY_COMPANY_ID,
+                "expected_id": current.company_key(),
                 "expected_name": ADVANCLY_WORKBOOK_NAME,
                 "dimensions": ADVANCLY_DIMENSION_CODES,
                 "sync_running": _SYNC["running"],
                 "secret_reference": current.bc_secret_reference,
+                **inventory,
             }
         return page(request, session, "books.html", **payload)
 
@@ -382,7 +400,7 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         parent_id: str = Form(""),
         upload: UploadFile | None = File(None),
     ):
-        session = guard(request, "books:read")
+        session = guard(request, "files:write")
         if not isinstance(session, SessionView):
             return session
         parent = None
@@ -426,7 +444,7 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         parent_id: str = Form(""),
         name: str = Form(""),
     ):
-        session = guard(request, "books:read")
+        session = guard(request, "files:write")
         if not isinstance(session, SessionView):
             return session
         parent = None
@@ -442,7 +460,7 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
 
     @app.post("/repositories/{node_id}/delete")
     def repository_delete(request: Request, node_id: str, csrf_token: str = Form("")):
-        session = guard(request, "books:read")
+        session = guard(request, "files:write")
         if not isinstance(session, SessionView):
             return session
         parsed = parse_node_id(node_id)
@@ -462,8 +480,9 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         date_to: str = Form(""),
         year: str = Form(""),
         month: str = Form(""),
+        scope: str = Form("all"),
     ):
-        session = guard(request, "books:read")
+        session = guard(request, "books:sync")
         if not isinstance(session, SessionView):
             return session
         if not same(csrf_token, session.csrf):
@@ -479,6 +498,7 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 raise ValueError
         except ValueError:
             return RedirectResponse("/books", status_code=303)
+        all_companies = scope.strip().lower() != "one"
         principal_id = session.principal_id
         with _SYNC_LOCK:
             if _SYNC["running"]:
@@ -487,9 +507,15 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
 
         def work():
             try:
-                SyncService(current).run_advancly(
-                    parsed_from, parsed_to, parsed_year, parsed_month, actor_id=principal_id
-                )
+                service = SyncService(current)
+                if all_companies:
+                    service.run_all_companies(
+                        parsed_from, parsed_to, parsed_year, parsed_month, actor_id=principal_id
+                    )
+                else:
+                    service.run_advancly(
+                        parsed_from, parsed_to, parsed_year, parsed_month, actor_id=principal_id
+                    )
             finally:
                 with _SYNC_LOCK:
                     _SYNC["running"] = False
@@ -568,6 +594,103 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             grouped=grouped,
             rule=rule,
         )
+
+    @app.get("/bank-movements", response_class=HTMLResponse)
+    def movements(
+        request: Request,
+        account_id: int | None = None,
+        year: int | None = None,
+        month: int | None = None,
+    ):
+        session = guard(request, "bank:read")
+        if not isinstance(session, SessionView):
+            return session
+        chosen_account = account_id if account_id and account_id > 0 else None
+        chosen_year = year if year and year >= 2000 else None
+        chosen_month = month if month and 1 <= month <= 12 else None
+        if (chosen_year is None) != (chosen_month is None):
+            chosen_year = None
+            chosen_month = None
+        with db() as conn:
+            accounts = movement_accounts(conn)
+            months = movement_months(conn)
+            report = bank_movements(conn, chosen_account, chosen_year, chosen_month)
+        return page(
+            request,
+            session,
+            "bank_movements.html",
+            accounts=accounts,
+            months=months,
+            report=report,
+            account_id=chosen_account,
+            year=chosen_year,
+            month=chosen_month,
+        )
+
+    @app.get("/bank-movements.csv")
+    def movements_csv(
+        request: Request,
+        account_id: int | None = None,
+        year: int | None = None,
+        month: int | None = None,
+    ):
+        session = guard(request, "bank:read")
+        if not isinstance(session, SessionView):
+            return session
+        if "export" not in session.scopes:
+            return JSONResponse({"status": "not permitted"}, status_code=403)
+        chosen_account = account_id if account_id and account_id > 0 else None
+        chosen_year = year if year and year >= 2000 else None
+        chosen_month = month if month and 1 <= month <= 12 else None
+        if (chosen_year is None) != (chosen_month is None):
+            chosen_year = None
+            chosen_month = None
+        with db() as conn:
+            report = bank_movements(conn, chosen_account, chosen_year, chosen_month, limit=None)
+            _export(
+                conn,
+                session.principal_id,
+                "bank-movements",
+                {"account_id": chosen_account, "year": chosen_year, "month": chosen_month},
+                report["total_rows"],
+            )
+            conn.commit()
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            [
+                "posting_date",
+                "bank_name",
+                "account_display",
+                "document_type",
+                "document_number",
+                "description",
+                "currency",
+                "amount",
+                "amount_lcy",
+                "open",
+                "statement_status",
+                "reversed",
+            ]
+        )
+        for row in report["rows"]:
+            writer.writerow(
+                [
+                    row["posting_date"],
+                    row["bank_name"],
+                    row["account_display"],
+                    row["document_type"] or "",
+                    row["document_number"] or "",
+                    row["description"] or "",
+                    row["currency_code"] or "",
+                    "" if row["amount"] is None else format(row["amount"], "f"),
+                    "" if row["amount_lcy"] is None else format(row["amount_lcy"], "f"),
+                    "" if row["open"] is None else ("yes" if row["open"] else "no"),
+                    row["statement_status"] or "",
+                    "" if row["reversed"] is None else ("yes" if row["reversed"] else "no"),
+                ]
+            )
+        return Response(buffer.getvalue(), media_type="text/csv", headers={"Cache-Control": "no-store"})
 
     @app.get("/bank-accounts.csv")
     def banks_csv(request: Request):

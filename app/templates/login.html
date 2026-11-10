@@ -5,23 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Sign in · VGG OS</title>
-  <meta name="theme-color" content="#EDF9FD">
+  <meta name="theme-color" content="#102028">
   <link rel="icon" href="/static/favicon.png">
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/app.css?v=2">
 </head>
-<body>
+<body class="gate">
   <main class="auth">
       <section class="auth-card">
         <div class="auth-brand">
-          <img class="logo" src="/static/vgg-logo.webp" alt="">
-          <h1>VGG OS</h1>
+          <img class="logo" src="/static/vgg-logo.webp" alt="Venture Garden Group">
+          <div>
+            <p class="auth-kicker">Finance</p>
+            <h1>VGG OS</h1>
+          </div>
         </div>
         <h2>Sign in</h2>
+        <p class="auth-lead">Books, banks, and the report library.</p>
         {% if error %}<p class="gate-error">{{ error }}</p>{% endif %}
         <form method="post" action="/api/session" class="stack" onsubmit="this.querySelector('button').textContent='Signing in'">
           <input type="hidden" name="csrf_token" value="{{ csrf }}">
-          <label>Email <input name="email" type="email" autocomplete="username" required></label>
-          <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+          <label>Email
+            <span class="field-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <input name="email" type="email" autocomplete="username" required>
+            </span>
+          </label>
+          <label>Password
+            <span class="field-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input name="password" type="password" autocomplete="current-password" required>
+            </span>
+          </label>
           <button type="submit" class="btn btn-primary">Sign in</button>
         </form>
       </section>

@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from app.bc_url import ConfigError, resolve_api_root
+from app.bc_url import ConfigError, resolve_api_root, scheme_allowed
 from app.constants import API_ROUTE
 from app.money import parse_json_exact
 
@@ -27,8 +27,10 @@ class BcClient:
         access_key: str,
         transport: httpx.BaseTransport | None = None,
         api_route: str = API_ROUTE,
+        allow_private_http: bool = False,
     ):
-        self.api_root = resolve_api_root(base_url, api_route)
+        self._allow_private_http = allow_private_http
+        self.api_root = resolve_api_root(base_url, api_route, allow_private_http)
         self._username = username
         self._access_key = access_key
         self._client = httpx.Client(transport=transport, timeout=httpx.Timeout(120.0), follow_redirects=False)
@@ -114,9 +116,15 @@ class BcClient:
     def _assert_safe_link(self, url: str) -> None:
         parsed = urlparse(url)
         root = urlparse(self.api_root)
-        if parsed.scheme != "https":
-            raise ConfigError("Refused a Business Central URL that is not HTTPS. No credentials were sent on that URL.")
-        if (parsed.hostname or "").lower() != (root.hostname or "").lower():
-            raise ConfigError("Refused a Business Central URL that changes host.")
+        if not scheme_allowed(url, self._allow_private_http):
+            raise ConfigError("Refused a Business Central URL that is not HTTPS or a private VPN address. No credentials were sent on that URL.")
+        if parsed.scheme != root.scheme:
+            raise ConfigError("Refused a Business Central URL that changes scheme.")
+        defaults = {"https": 443, "http": 80}
+        same_port = (parsed.port or defaults.get(parsed.scheme)) == (root.port or defaults.get(root.scheme))
+        if (parsed.hostname or "").lower() != (root.hostname or "").lower() or not same_port:
+            raise ConfigError("Refused a Business Central URL that changes host or port.")
+        if parsed.username or parsed.password:
+            raise ConfigError("Refused a Business Central URL that carries a login.")
         if "odatav4" in (parsed.path or "").lower():
             raise ConfigError("Refused a Business Central URL that uses /ODataV4/.")

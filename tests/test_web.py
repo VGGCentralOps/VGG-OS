@@ -35,12 +35,16 @@ def test_pages_require_a_session_and_do_not_invent_figures():
         assert "Elijah" not in books.text
         assert 'href="/reports"' not in books.text
         assert "Repositories" in books.text
+        assert "Bank movements" in books.text
         assert "10.250.50.9" not in books.text
         trial = signed.get("/trial-balance")
         assert "No month has been loaded" in trial.text
         banks = signed.get("/bank-accounts")
         assert "No bank accounts are loaded" in banks.text
         assert "No account is flagged dormant" in banks.text
+        movements = signed.get("/bank-movements")
+        assert movements.status_code == 200
+        assert "No bank ledger entries are loaded" in movements.text
         reports = signed.get("/reports", follow_redirects=False)
         assert reports.status_code == 303
         assert reports.headers["location"] == "/repositories"
@@ -63,3 +67,27 @@ def test_sync_post_does_not_start_a_call(monkeypatch):
             follow_redirects=False,
         )
         assert response.status_code == 303
+
+
+def test_read_only_grants_cannot_sync_or_write_files():
+    with signed_in_client(scopes=("books:read", "bank:read")) as (signed, *_rest):
+        home = signed.get("/")
+        assert home.status_code == 200
+        assert "Your account can view runs but cannot start a pull" not in home.text
+        books = signed.get("/books")
+        assert "cannot start a pull" in books.text
+        token = csrf_from(books.text) if 'name="csrf_token"' in books.text else csrf_from(home.text)
+        sync = signed.post(
+            "/sync",
+            data={"csrf_token": token, "date_from": "2026-01-01", "date_to": "2026-01-31", "year": "2026", "month": "1"},
+            follow_redirects=False,
+        )
+        assert sync.status_code == 403
+        repos = signed.get("/repositories")
+        assert "cannot upload" in repos.text
+        write = signed.post(
+            "/repositories/folder",
+            data={"csrf_token": csrf_from(repos.text), "name": "Board Pack"},
+            follow_redirects=False,
+        )
+        assert write.status_code == 403
