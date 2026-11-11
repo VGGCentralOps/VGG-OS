@@ -12,14 +12,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <meta name="referrer" content="same-origin">
   <title>{% block title %}VGG OS{% endblock %}</title>
   <meta name="theme-color" content="#edf9fd">
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
-  <link rel="stylesheet" href="/static/app.css?v=6">
-  <script src="/static/nav.js?v=6" defer></script>
+  <script src="/static/theme.js?v=7"></script>
+  <link rel="stylesheet" href="/static/app.css?v=7">
+  <script src="/static/nav.js?v=7" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -32,7 +33,17 @@
         <a class="wordmark" href="/">VGG OS</a>
         <span class="brand-sub">Venture Garden</span>
       </div>
-      <button type="button" class="collapse-btn" data-collapse aria-label="Collapse navigation" aria-expanded="true">{{ icon('chevron-left') }}</button>
+    </div>
+    <div class="sidebar-tools">
+      <button type="button" class="tool-btn" data-theme-toggle aria-label="Switch to dark mode" aria-pressed="false" title="Theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <span class="nav-text tool-label">Theme</span>
+      </button>
+      <button type="button" class="tool-btn collapse-btn" data-collapse aria-label="Collapse navigation" aria-expanded="true" title="Collapse">
+        {{ icon('chevron-left') }}
+        <span class="nav-text tool-label">Collapse</span>
+      </button>
     </div>
     <nav class="side-nav" aria-label="Primary">
       {% if can_books %}
@@ -75,6 +86,10 @@
     <header class="topbar glass">
       <a class="mobile-brand" href="/"><img class="logo" src="/static/vgg-logo.webp" alt="" width="34" height="24"><span class="wordmark">VGG OS</span></a>
       <div class="topbar-status">
+        <button type="button" class="tool-btn topbar-theme" data-theme-toggle aria-label="Switch to dark mode" aria-pressed="false" title="Theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
         {% if bc_state == "configured" %}
         <span class="chip chip-ok" title="Business Central credentials are configured on the server"><span class="dot" aria-hidden="true"></span><span class="chip-label-long">Business Central&nbsp;</span>configured</span>
         {% else %}
@@ -110,6 +125,11 @@
         <span class="who-text"><span class="who-name">{{ principal_name }}</span><span class="who-meta">Signed in</span></span>
       </div>
       {% endif %}
+      <button type="button" class="tool-btn sheet-theme" data-theme-toggle aria-label="Switch to dark mode" aria-pressed="false">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <span>Theme</span>
+      </button>
       {% if can_bank %}{{ navlink("/bank-movements", "Bank movements", "movements", path.startswith("/bank-movements")) }}{% endif %}
       {% if can_books %}{{ navlink("/repositories", "Repositories", "folder", path.startswith("/repositories")) }}{% endif %}
       <form method="post" action="/logout">

@@ -13,21 +13,35 @@
   }
 
   /* Sidebar collapse (desktop). Preference only; no data. */
-  var collapseBtn = document.querySelector("[data-collapse]");
+  var collapseBtns = document.querySelectorAll("[data-collapse]");
   function applyCollapsed(on) {
     root.classList.toggle("nav-collapsed", on);
-    if (collapseBtn) {
-      collapseBtn.setAttribute("aria-expanded", on ? "false" : "true");
-      collapseBtn.setAttribute("aria-label", on ? "Expand navigation" : "Collapse navigation");
-    }
+    collapseBtns.forEach(function (btn) {
+      btn.setAttribute("aria-expanded", on ? "false" : "true");
+      btn.setAttribute("aria-label", on ? "Expand navigation" : "Collapse navigation");
+      var label = btn.querySelector(".tool-label");
+      if (label) label.textContent = on ? "Expand" : "Collapse";
+    });
   }
   applyCollapsed(store(true) === "1");
-  if (collapseBtn) {
-    collapseBtn.addEventListener("click", function () {
+  collapseBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
       var on = !root.classList.contains("nav-collapsed");
       applyCollapsed(on);
       store(false, on ? "1" : "0");
     });
+  });
+
+  /* Theme toggle (light / dark). Shared with theme.js. */
+  document.addEventListener("click", function (event) {
+    var toggle = event.target.closest && event.target.closest("[data-theme-toggle]");
+    if (!toggle) return;
+    if (window.vggosTheme && typeof window.vggosTheme.toggle === "function") {
+      window.vggosTheme.toggle();
+    }
+  });
+  if (window.vggosTheme && typeof window.vggosTheme.apply === "function") {
+    window.vggosTheme.apply();
   }
 
   /* Slim progress bar for full page navigations and form posts. */
@@ -101,11 +115,15 @@
     if (button) {
       var busy = button.getAttribute("data-busy");
       if (busy) {
-        var label = button.querySelector("[data-label]") || button;
-        label.textContent = busy;
+        var label = button.querySelector("[data-label]");
+        if (label) label.textContent = busy;
       }
+      button.classList.add("is-loading");
       button.setAttribute("aria-busy", "true");
       window.setTimeout(function () { button.disabled = true; }, 0);
+    }
+    if (form.hasAttribute("data-signin")) {
+      document.body.classList.add("is-signing-in");
     }
     startProgress();
   });
