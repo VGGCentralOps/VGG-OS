@@ -8,17 +8,17 @@
   <div>
     <p class="eyebrow">Banks</p>
     <h1>Bank accounts</h1>
-    <p class="lead">{% if unmasked %}Account numbers are shown in full for your grant.{% else %}Account numbers are masked unless your grant allows otherwise.{% endif %}</p>
+    <p class="lead">Group bank register — owning entity, currency, and ledger activity.</p>
   </div>
   <div class="page-actions">
     <a class="btn btn-secondary" href="/bank-movements" data-prefetch>{{ icon('movements') }}Movements</a>
-    {% if can_export %}<a class="btn btn-secondary" href="/bank-accounts.csv">{{ icon('download') }}{% if unmasked %}Export{% else %}Export masked{% endif %}</a>{% endif %}
+    {% if can_export %}<a class="btn btn-secondary" href="/bank-accounts.csv">{{ icon('download') }}Export</a>{% endif %}
   </div>
 </header>
 
 <section class="card">
   <div class="card-head">
-    <div class="card-title">{{ icon('bank') }}<div><h2>Register</h2><p class="meta">Projected from Business Central bank accounts. Entries and last posting date come from loaded bank ledger lines.</p></div></div>
+    <div class="card-title">{{ icon('bank') }}<div><h2>Register</h2><p class="meta">Entries and last posting date come from loaded bank ledger lines.</p></div></div>
     <form method="post" action="/bank-accounts/check">
       <input type="hidden" name="csrf_token" value="{{ csrf }}">
       <button type="submit" class="btn btn-secondary btn-small">Run daily check</button>
@@ -29,7 +29,7 @@
     <table class="data">
       <thead>
         <tr>
-          <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th><th>Business Central id</th>
+          <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th><th>Source id</th>
           <th>Owner</th><th>Route</th><th>Link</th><th class="num">Entries</th><th>Last posted</th><th>List</th>
         </tr>
       </thead>
@@ -59,7 +59,7 @@
 
 <div class="grid-2">
   <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>In Business Central, no feed</h2></div></div>
+    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>In the register, no feed</h2></div></div>
     <div class="card-body">
       {% if grouped["IN_BC_NO_FEED"] %}
       <ul class="list-plain">{% for task in grouped["IN_BC_NO_FEED"] %}<li>{{ chip('waiting', 'Open') }}<span class="grow">{{ task.detail }}</span></li>{% endfor %}</ul>
@@ -67,7 +67,7 @@
     </div>
   </section>
   <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>Feed with no Business Central account</h2></div></div>
+    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>Feed with no register account</h2></div></div>
     <div class="card-body">
       {% if grouped["FEED_WITHOUT_BC"] %}
       <ul class="list-plain">{% for task in grouped["FEED_WITHOUT_BC"] %}<li>{{ chip('attention', 'Open') }}<span class="grow">{{ task.detail }} <code>{{ task.feed_reference }}</code></span></li>{% endfor %}</ul>

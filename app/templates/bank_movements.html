@@ -8,7 +8,7 @@
   <div>
     <p class="eyebrow">Banks</p>
     <h1>Bank movements</h1>
-    <p class="lead">Business Central bank account ledger entries for Advancly. This is the book side, not a bank statement and not a live balance.</p>
+    <p class="lead">Bank ledger entries on the books. This is not a bank statement and not a live balance.</p>
   </div>
   {% if report.total_rows and can_export %}
   <div class="page-actions">
@@ -128,7 +128,7 @@
   <div class="card-body"><p class="muted small">Showing the newest {{ report.rows|length }} of {{ report.total_rows }} rows. Export CSV for the full filter.</p></div>
   {% endif %}
   {% else %}
-  <div class="empty">{{ icon('inbox') }}<p>No bank ledger entries are loaded for this filter. Run a Business Central pull that includes bank account ledger entries.</p></div>
+  <div class="empty">{{ icon('inbox') }}<p>No bank ledger entries match this filter yet.</p></div>
   {% endif %}
 </section>
 {% endblock %}

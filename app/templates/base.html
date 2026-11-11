@@ -16,11 +16,12 @@
   <meta name="referrer" content="same-origin">
   <title>{% block title %}VGG OS{% endblock %}</title>
   <meta name="theme-color" content="#edf9fd">
+  <meta name="application-name" content="VGG OS">
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
-  <script src="/static/theme.js?v=14"></script>
-  <link rel="stylesheet" href="/static/app.css?v=14">
-  <script src="/static/nav.js?v=14" defer></script>
+  <script src="/static/theme.js?v=15"></script>
+  <link rel="stylesheet" href="/static/app.css?v=15">
+  <script src="/static/nav.js?v=15" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -85,15 +86,7 @@
     <header class="topbar glass">
       <a class="mobile-brand" href="/"><img class="logo" src="/static/vgg-logo.webp" alt="" width="34" height="24"><span class="wordmark">VGG OS</span></a>
       <div class="topbar-status">
-        {% if bc_state == "configured" %}
-        <span class="chip chip-ok" title="Business Central credentials are configured on the server"><span class="dot" aria-hidden="true"></span><span class="chip-label-long">Business Central&nbsp;</span>configured</span>
-        {% else %}
-        <span class="chip chip-warn" title="Business Central credentials are not configured on the server"><span class="dot" aria-hidden="true"></span><span class="chip-label-long">Business Central&nbsp;</span>not configured</span>
-        {% endif %}
-        {% if can_bank %}
-        {% if unmasked %}<span class="chip chip-attention" title="Your account sees full account numbers">{{ icon('shield') }}Unmasked</span>
-        {% else %}<span class="chip" title="Account numbers are masked">{{ icon('lock') }}Masked</span>{% endif %}
-        {% endif %}
+        <span class="topbar-place">vggos.vgg.tools</span>
       </div>
     </header>
     <main id="main" class="content" tabindex="-1">

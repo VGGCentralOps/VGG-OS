@@ -302,13 +302,15 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if not isinstance(session, SessionView):
             return session
         with db() as conn:
+            inventory = books_inventory(conn)
+            totals = inventory.get("totals") or {}
             payload = {
-                "run_count": len(sync_runs(conn)),
+                "company_count": totals.get("companies", 0),
+                "account_count": totals.get("accounts", 0),
                 "bank_count": advancly_bank_count(conn),
                 "task_count": open_task_count(conn),
                 "file_count": file_count(conn),
                 "movement_count": movement_count(conn),
-                "last_run": last_run(conn),
             }
         return page(request, session, "overview.html", **payload)
 

@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% from "_chip.html" import chip, run_chip %}
-{% from "_fmt.html" import when, n %}
+{% from "_fmt.html" import n %}
 {% block title %}Overview · VGG OS{% endblock %}
 {% block body %}
 {% set bank_ok = "bank:read" in scopes %}
@@ -11,75 +10,66 @@
     <h1>Overview</h1>
     <p class="lead">Group operating surface for company records, decisions, and shared truth across Venture Garden.</p>
   </div>
-  {% if can_sync %}
-  <div class="page-actions">
-    <a class="btn btn-primary" href="/books" data-prefetch>{{ icon('refresh') }}Pull from Business Central</a>
-  </div>
-  {% endif %}
 </header>
 
 <section class="kpis" aria-label="Key figures">
   <a class="kpi" href="/books" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Sync runs</span><span class="kpi-icon">{{ icon('books') }}</span></span>
-    <span class="kpi-value">{{ n(run_count) }}</span>
-    <span class="kpi-hint">Books · ingestion history</span>
+    <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
+    <span class="kpi-value">{{ n(company_count) }}</span>
+    <span class="kpi-hint">In the books workspace</span>
   </a>
   {% if bank_ok %}
   <a class="kpi" href="/bank-accounts" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Bank accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
     <span class="kpi-value">{{ n(bank_count) }}</span>
-    <span class="kpi-hint">Register from Business Central</span>
+    <span class="kpi-hint">Group register</span>
   </a>
   <a class="kpi" href="/bank-movements" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Bank movements</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
     <span class="kpi-value">{{ n(movement_count) if movement_count is defined else "—" }}</span>
-    <span class="kpi-hint">Ledger entries loaded</span>
+    <span class="kpi-hint">Ledger activity</span>
   </a>
   <a class="kpi" href="/bank-accounts" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Open mismatches</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
+    <span class="kpi-top"><span class="kpi-label">Open items</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
     <span class="kpi-value">{{ n(task_count) }}</span>
     <span class="kpi-hint">Needs follow-up</span>
   </a>
   {% endif %}
   <a class="kpi" href="/repositories" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Report files</span><span class="kpi-icon">{{ icon('folder') }}</span></span>
+    <span class="kpi-top"><span class="kpi-label">Library files</span><span class="kpi-icon">{{ icon('folder') }}</span></span>
     <span class="kpi-value">{{ n(file_count) }}</span>
-    <span class="kpi-hint">Repositories</span>
+    <span class="kpi-hint">Report library</span>
   </a>
 </section>
 
 <div class="grid-2">
   <section class="card">
     <div class="card-head">
-      <div class="card-title">{{ icon('clock') }}<h2>Latest sync</h2></div>
-      <a class="btn btn-ghost btn-small" href="/books" data-prefetch>All runs</a>
+      <div class="card-title">{{ icon('overview') }}<h2>Workspace</h2></div>
     </div>
     <div class="card-body">
-      {% if last_run %}
-      <dl class="kv">
-        <dt>Status</dt><dd>{{ run_chip(last_run.status) }}</dd>
-        <dt>Stream</dt><dd>{{ last_run.endpoint_code or "—" }}</dd>
-        <dt>Started</dt><dd class="tabular">{{ when(last_run.started_at) }}</dd>
-        <dt>Finished</dt><dd class="tabular">{{ when(last_run.finished_at) }}</dd>
-        <dt>Rows</dt><dd class="tabular">{{ n(last_run.rows_accepted) }} accepted · {{ n(last_run.rows_rejected) }} rejected</dd>
-        {% if last_run.error_summary %}<dt>Error</dt><dd>{{ last_run.error_summary }}</dd>{% endif %}
-      </dl>
-      {% else %}
-      <div class="empty">{{ icon('inbox') }}<p>No Business Central pull has run yet.</p></div>
-      {% endif %}
+      <ul class="list-plain">
+        <li><span class="grow"><a href="/books" data-prefetch>Books</a> — companies, accounts, and ledger coverage.</span></li>
+        {% if bank_ok %}
+        <li><span class="grow"><a href="/bank-accounts" data-prefetch>Bank accounts</a> — the group register and open follow-ups.</span></li>
+        <li><span class="grow"><a href="/bank-movements" data-prefetch>Movements</a> — bank ledger activity by period.</span></li>
+        {% endif %}
+        <li><span class="grow"><a href="/repositories" data-prefetch>Library</a> — prepared reports and working files.</span></li>
+        <li><span class="grow"><a href="/settings" data-prefetch>Settings</a> — appearance and account preferences.</span></li>
+      </ul>
     </div>
   </section>
 
   <section class="card">
     <div class="card-head">
-      <div class="card-title">{{ icon('shield') }}<h2>Ground rules</h2></div>
+      <div class="card-title">{{ icon('shield') }}<h2>How to use VGG OS</h2></div>
     </div>
     <div class="card-body">
       <ul class="list-plain">
-        <li>{{ chip('ok', 'Read only') }}<span class="grow">Business Central is only read. Nothing is posted, paid, created or closed from here.</span></li>
-        <li>{{ chip('ok', 'No zeros') }}<span class="grow">A missing amount stays blank. It is never stored or shown as zero.</span></li>
-        <li>{{ chip('ok', 'Masked') }}<span class="grow">Account numbers are masked unless your grant allows otherwise. Exports are recorded.</span></li>
-        <li>{{ chip('info', 'Record wins') }}<span class="grow">If this screen and Business Central disagree, Business Central is right.</span></li>
+        <li><span class="grow">Treat figures here as the shared group view for decisions and review.</span></li>
+        <li><span class="grow">Missing amounts stay blank — they are never filled with zero.</span></li>
+        <li><span class="grow">Use Books, Banks, and the Library as separate spaces with one product language.</span></li>
+        <li><span class="grow">Account access is permissioned. Only people you admit can sign in.</span></li>
       </ul>
     </div>
   </section>

@@ -8,7 +8,7 @@
   <div>
     <p class="eyebrow">Books</p>
     <h1>Trial balance check</h1>
-    <p class="lead">Loaded ledger lines for one month beside the Business Central control total. Missing sides stay blank.</p>
+    <p class="lead">Ledger lines for one month beside the control total. Missing sides stay blank.</p>
   </div>
   {% if report and can_export %}
   <div class="page-actions">
@@ -54,7 +54,7 @@
   <div class="kpi">
     <span class="kpi-top"><span class="kpi-label">Differences</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
     <span class="kpi-value">{{ diffs|length }}</span>
-    <span class="kpi-hint">Non-zero vs Business Central</span>
+    <span class="kpi-hint">Non-zero vs control total</span>
   </div>
   <div class="kpi">
     <span class="kpi-top"><span class="kpi-label">Local sum</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
@@ -69,12 +69,12 @@
       <div class="card-title">{{ icon('scale') }}<div><h2>{{ period(year, month) }}</h2><p class="meta">Net movement in the month, per account. Not a group total.</p></div></div>
     </div>
     {% if not report.has_local and not report.has_control %}
-    <div class="empty">{{ icon('inbox') }}<p>No ledger lines and no Business Central control total for this month.</p></div>
+    <div class="empty">{{ icon('inbox') }}<p>No ledger lines and no control total for this month.</p></div>
     {% else %}
     <div class="table-wrap tall">
       <table class="data">
         <thead>
-          <tr><th>Account</th><th>Name</th><th class="num">Local net</th><th class="num">Business Central net</th><th class="num">Difference</th><th class="num">Local lines</th><th class="num">BC entries</th></tr>
+          <tr><th>Account</th><th>Name</th><th class="num">Local net</th><th class="num">Control net</th><th class="num">Difference</th><th class="num">Local lines</th><th class="num">Control entries</th></tr>
         </thead>
         <tbody>
           {% for row in report.rows %}
