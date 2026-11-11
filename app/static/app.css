@@ -240,9 +240,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .brand-row .logo,
 .mobile-brand .logo {
   height: 34px; width: auto; flex: none;
-  padding: 0.25rem 0.4rem; border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 1px 0 rgba(24, 41, 53, 0.04), 0 6px 16px -10px rgba(41, 138, 194, 0.35);
+  padding: 0; border-radius: 0; background: none; box-shadow: none;
 }
 .brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.05; }
 .wordmark {
@@ -402,7 +400,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .nav-collapsed .sidebar .who-text { display: none; }
 .nav-collapsed .sidebar .brand-row { justify-content: center; padding-inline: 0; }
 .nav-collapsed .sidebar .brand-mark { align-items: center; }
-.nav-collapsed .sidebar .brand-row .logo { height: 28px; padding: 0.2rem; }
+.nav-collapsed .sidebar .brand-row .logo { height: 28px; }
 .nav-collapsed .side-nav a, .nav-collapsed .signout { justify-content: center; padding-inline: 0; }
 .nav-collapsed .who { justify-content: center; }
 .nav-collapsed .collapse-edge { top: 3.4rem; }
@@ -945,11 +943,11 @@ html[data-theme="dark"] .gate-panel {
 .auth-brand .logo {
   height: 44px;
   width: auto;
-  padding: 0.35rem 0.45rem;
-  border-radius: 10px;
-  background: var(--logo-plate, #fff);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-sm);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 .auth-card h2 {
   font: 700 1.55rem/1.2 var(--font-display);
@@ -1024,9 +1022,6 @@ html[data-theme="dark"] .gate-panel {
 .btn-signin svg { width: 1.05rem; height: 1.05rem; }
 .btn-signin .spin { animation: spin 0.85s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-html[data-theme="dark"] .auth-brand .logo {
-  background: #f4fbfd;
-}
 .auth-foot {
   margin-top: 1.5rem;
   text-align: left;
