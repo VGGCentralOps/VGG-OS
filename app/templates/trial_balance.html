@@ -6,9 +6,8 @@
 {% block body %}
 <header class="page-head">
   <div>
-    <p class="eyebrow">Books</p>
     <h1>Trial balance check</h1>
-    <p class="lead">Ledger lines for one month beside the control total. Missing sides stay blank.</p>
+    <p class="lead">Monthly account movements against the control total.</p>
   </div>
   {% if report and can_export %}
   <div class="page-actions">
@@ -49,24 +48,24 @@
   <div class="kpi tone-violet">
     <span class="kpi-top"><span class="kpi-label">Accounts</span><span class="kpi-icon">{{ icon('list') }}</span></span>
     <span class="kpi-value">{{ report.rows|length }}</span>
-    <span class="kpi-hint">On either side</span>
+    <span class="kpi-hint">In this month</span>
   </div>
   <div class="kpi tone-amber">
     <span class="kpi-top"><span class="kpi-label">Differences</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
     <span class="kpi-value">{{ diffs|length }}</span>
-    <span class="kpi-hint">Non-zero vs control total</span>
+    <span class="kpi-hint">Vs control total</span>
   </div>
   <div class="kpi tone-green">
     <span class="kpi-top"><span class="kpi-label">Local sum</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
     <span class="kpi-value tabular">{{ report.local_sum_text or "—" }}</span>
-    <span class="kpi-hint">Accounts with loaded lines only</span>
+    <span class="kpi-hint">Local ledger</span>
   </div>
 </section>
 
 <div class="grid-main-aside">
   <section class="card">
     <div class="card-head">
-      <div class="card-title">{{ icon('scale') }}<div><h2>{{ period(year, month) }}</h2><p class="meta">Net movement in the month, per account. Not a group total.</p></div></div>
+      <div class="card-title">{{ icon('scale') }}<div><h2>{{ period(year, month) }}</h2><p class="meta">Net movement per account</p></div></div>
     </div>
     {% if not report.has_local and not report.has_control %}
     <div class="empty">{{ icon('inbox') }}<p>No ledger lines and no control total for this month.</p></div>

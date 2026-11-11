@@ -2,35 +2,28 @@
 {% from "_chip.html" import chip %}
 {% block title %}Reports · VGG OS{% endblock %}
 {% block body %}
-<header class="page-header">
-  <div class="page-title">
-    <span class="tick" aria-hidden="true"></span>
-    <div>
-      <h1>Report catalogue</h1>
-      <p>Fourteen names from the SQL pack. Each one is pending. This screen does not render a layout, a figure, or a group pack.</p>
-    </div>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Reports</p>
+    <h1>Report catalogue</h1>
+    <p class="lead">Named reports for the group pack.</p>
   </div>
 </header>
 
-<section class="callout">
-  <p>Weekly Cash Position 1 and Weekly Cash Position 2 stay as two catalogue rows until Finance says they are one report. The workbook password is still outstanding, so no sheet is opened here.</p>
-</section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>Pending names</h2>
-    <p>{{ reports|length }} rows. No amount column.</p>
+<section class="card">
+  <div class="card-head">
+    <div class="card-title"><div><h2>Catalogue</h2><p class="meta">{{ reports|length }} reports</p></div></div>
   </div>
-  <div class="section-body flush">
-    <table class="stack">
+  <div class="table-wrap mid">
+    <table class="data">
       <thead><tr><th>Name</th><th>Code</th><th>Cadence</th><th>Status</th></tr></thead>
       <tbody>
         {% for report in reports %}
         <tr>
-          <td data-label="Name">{{ report.name }}</td>
-          <td data-label="Code" class="mono">{{ report.code }}</td>
-          <td data-label="Cadence">{{ report.cadence or "Not set" }}</td>
-          <td data-label="Status">{{ chip('ready', 'Pending') }}</td>
+          <td>{{ report.name }}</td>
+          <td class="mono">{{ report.code }}</td>
+          <td>{{ report.cadence or "—" }}</td>
+          <td>{{ chip('ready', 'Pending') }}</td>
         </tr>
         {% endfor %}
       </tbody>

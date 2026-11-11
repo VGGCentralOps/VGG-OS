@@ -6,9 +6,8 @@
 {% block body %}
 <header class="page-head">
   <div>
-    <p class="eyebrow">Books</p>
     <h1>Books</h1>
-    <p class="lead">Company coverage across accounts, banks, and ledger activity.</p>
+    <p class="lead">Companies, accounts, banks, and ledger activity.</p>
   </div>
   <div class="page-actions">
     <a class="btn btn-secondary" href="/trial-balance" data-prefetch>{{ icon('scale') }}Trial balance</a>
@@ -44,7 +43,7 @@
 <div class="stack-gap">
   <section class="card" id="companies">
     <div class="card-head">
-      <div class="card-title">{{ icon('books') }}<div><h2>Companies</h2><p class="meta">What is available in the books workspace</p></div></div>
+      <div class="card-title">{{ icon('books') }}<div><h2>Companies</h2><p class="meta">Entity codes and ledger volume</p></div></div>
     </div>
     {% if companies %}
     <div class="table-wrap tall">
@@ -83,7 +82,7 @@
   {% if dataset_counts %}
   <section class="card" id="datasets">
     <div class="card-head">
-      <div class="card-title">{{ icon('list') }}<div><h2>Datasets</h2><p class="meta">Master-record counts. Empty sets stay empty on purpose.</p></div></div>
+      <div class="card-title">{{ icon('list') }}<div><h2>Datasets</h2><p class="meta">Master-record counts by dataset</p></div></div>
     </div>
     <div class="table-wrap mid">
       <table class="data">

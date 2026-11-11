@@ -298,23 +298,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 }
 .library-title { min-width: 0; }
 .library-title h1 { font-size: clamp(1.3rem, 1rem + 0.8vw, 1.6rem); }
-.library-title .eyebrow {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--tone-violet); margin-bottom: 0.2rem;
-}
-.library-title .eyebrow::before {
-  content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%;
-  background: linear-gradient(135deg, var(--tone-violet), var(--brand));
-  box-shadow: 0 0 0 3px var(--tone-violet-soft);
-}
 .library-title .crumbs { margin-top: 0.45rem; }
-.library-note {
-  max-width: 28ch;
-  color: var(--muted);
-  font-size: 0.84rem;
-  line-height: 1.4;
-}
 .library-compose {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -391,7 +375,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .library-list .table-wrap.mid { max-height: min(58vh, 34rem); }
 @media (max-width: 820px) {
   .library-compose { grid-template-columns: 1fr; }
-  .library-note { max-width: none; }
 }
 
 .prefs {
@@ -407,16 +390,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   padding: 0.15rem 0.1rem;
 }
 .prefs-head h1 { font-size: 1.35rem; }
-.prefs-head .eyebrow {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--brand-strong); margin-bottom: 0.1rem;
-}
-.prefs-head .eyebrow::before {
-  content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand), var(--accent-green));
-  box-shadow: 0 0 0 3px var(--brand-soft);
-}
 .prefs-head .lead { color: var(--muted); font-size: 0.88rem; margin-top: 0.15rem; }
 .theme-picker {
   display: grid;
@@ -593,16 +566,6 @@ body.is-navigating .content {
   box-shadow: var(--shadow-sm);
 }
 .page-head h1 { font-size: clamp(1.3rem, 1rem + 0.85vw, 1.65rem); }
-.page-head .eyebrow {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--brand-strong); margin-bottom: 0.25rem;
-}
-.page-head .eyebrow::before {
-  content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand), var(--accent-green));
-  box-shadow: 0 0 0 3px var(--brand-soft);
-}
 .page-head .lead { color: var(--muted); margin-top: 0.25rem; max-width: 62ch; font-size: 0.9rem; }
 .page-actions { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
 

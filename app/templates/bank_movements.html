@@ -6,9 +6,8 @@
 {% block body %}
 <header class="page-head">
   <div>
-    <p class="eyebrow">Banks</p>
     <h1>Bank movements</h1>
-    <p class="lead">Bank ledger entries on the books. This is not a bank statement and not a live balance.</p>
+    <p class="lead">Posted bank ledger activity by account and period.</p>
   </div>
   {% if report.total_rows and can_export %}
   <div class="page-actions">
@@ -31,7 +30,7 @@
       <label class="field">Year<input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" placeholder="YYYY"></label>
       <label class="field">Month<input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" placeholder="1–12"></label>
       <div class="span-all split">
-        <p class="muted small">Leave month blank to see every loaded posting date.</p>
+        <p class="muted small">Leave month blank to include every posting date.</p>
         <button type="submit" class="btn btn-primary">Show movements</button>
       </div>
     </form>
@@ -54,14 +53,14 @@
   <div class="kpi tone-teal">
     <span class="kpi-top"><span class="kpi-label">Accounts in filter</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
     <span class="kpi-value">{{ n(report.summary|length) }}</span>
-    <span class="kpi-hint">Book ledger only</span>
+    <span class="kpi-hint">In this filter</span>
   </div>
 </section>
 
 {% if report.summary %}
 <section class="card">
   <div class="card-head">
-    <div class="card-title">{{ icon('list') }}<div><h2>By account</h2><p class="meta">Inflow and outflow stay blank when any amount in the filter is missing.</p></div></div>
+    <div class="card-title">{{ icon('list') }}<div><h2>By account</h2><p class="meta">Inflow, outflow, and net for the current filter.</p></div></div>
   </div>
   <div class="table-wrap mid">
     <table class="data">

@@ -6,7 +6,6 @@
 {% block body %}
 <header class="page-head">
   <div>
-    <p class="eyebrow">Banks</p>
     <h1>Bank accounts</h1>
     <p class="lead">Group bank register — owning entity, currency, and ledger activity.</p>
   </div>
@@ -18,7 +17,7 @@
 
 <section class="card">
   <div class="card-head">
-    <div class="card-title">{{ icon('bank') }}<div><h2>Register</h2><p class="meta">Entries and last posting date come from loaded bank ledger lines.</p></div></div>
+    <div class="card-title">{{ icon('bank') }}<div><h2>Register</h2><p class="meta">Entries and last posting date</p></div></div>
     <form method="post" action="/bank-accounts/check">
       <input type="hidden" name="csrf_token" value="{{ csrf }}">
       <button type="submit" class="btn btn-secondary btn-small">Run daily check</button>
