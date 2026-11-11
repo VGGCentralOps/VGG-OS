@@ -4,39 +4,30 @@
 {% from "_fmt.html" import when, n, period %}
 {% block title %}Trial balance · VGG OS{% endblock %}
 {% block body %}
-<header class="page-head">
-  <div>
+<header class="page-head page-head-tools">
+  <div class="page-head-copy">
     <p class="eyebrow">Books</p>
     <h1>Trial balance</h1>
     <p class="lead">Monthly account movements against the control total.</p>
   </div>
-  {% if report and can_export %}
-  <div class="page-actions">
-    <a class="btn btn-secondary" href="/trial-balance.csv?year={{ year }}&amp;month={{ month }}">{{ icon('download') }}Export CSV</a>
+  <div class="page-actions head-tools">
+    <form method="get" action="/trial-balance" class="period-form" aria-label="Choose month">
+      <label class="field compact"><span>Year</span><input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" required></label>
+      <label class="field compact"><span>Month</span><input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" required></label>
+      <button type="submit" class="btn btn-primary btn-small">Show</button>
+    </form>
+    {% if report and can_export %}
+    <a class="btn btn-secondary btn-small" href="/trial-balance.csv?year={{ year }}&amp;month={{ month }}">{{ icon('download') }}CSV</a>
+    {% endif %}
   </div>
+  {% if months %}
+  <nav class="pills head-pills" aria-label="Available months">
+    {% for y, m in months[:18] %}
+    <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/trial-balance?year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
+    {% endfor %}
+  </nav>
   {% endif %}
 </header>
-
-<section class="card filter-bar">
-  <div class="card-body">
-    <div class="split">
-      <form method="get" action="/trial-balance" class="form-row">
-        <label class="field">Year<input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" required></label>
-        <label class="field">Month<input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" required></label>
-        <button type="submit" class="btn btn-primary">Show month</button>
-      </form>
-      {% if months %}
-      <nav class="pills" aria-label="Available months">
-        {% for y, m in months[:18] %}
-        <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/trial-balance?year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
-        {% endfor %}
-      </nav>
-      {% else %}
-      <p class="empty-inline">No months are available yet.</p>
-      {% endif %}
-    </div>
-  </div>
-</section>
 
 {% if report %}
 {% set diffs = report.rows|selectattr("difference")|list %}

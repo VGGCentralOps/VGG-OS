@@ -4,23 +4,16 @@
 {% from "_fmt.html" import when, n, period %}
 {% block title %}Bank movements · VGG OS{% endblock %}
 {% block body %}
-<header class="page-head">
-  <div>
+<header class="page-head page-head-tools">
+  <div class="page-head-copy">
     <p class="eyebrow">Banks</p>
     <h1>Bank movements</h1>
     <p class="lead">Posted bank ledger activity by account and period.</p>
   </div>
-  {% if report.total_rows and can_export %}
-  <div class="page-actions">
-    <a class="btn btn-secondary" href="/bank-movements.csv{% if account_id or year %}?{% endif %}{% if account_id %}account_id={{ account_id }}{% endif %}{% if account_id and year %}&amp;{% endif %}{% if year and month %}year={{ year }}&amp;month={{ month }}{% endif %}">{{ icon('download') }}Export CSV</a>
-  </div>
-  {% endif %}
-</header>
-
-<section class="card filter-bar">
-  <div class="card-body">
-    <form method="get" action="/bank-movements" class="fields">
-      <label class="field">Account
+  <div class="page-actions head-tools">
+    <form method="get" action="/bank-movements" class="period-form period-form-wide" aria-label="Filter movements">
+      <label class="field compact grow">
+        <span>Account</span>
         <select name="account_id">
           <option value="">All accounts</option>
           {% for account in accounts %}
@@ -28,23 +21,23 @@
           {% endfor %}
         </select>
       </label>
-      <label class="field">Year<input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" placeholder="YYYY"></label>
-      <label class="field">Month<input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" placeholder="1–12"></label>
-      <div class="span-all split">
-        <p class="muted small">Clear year and month to include every posting date.</p>
-        <button type="submit" class="btn btn-primary">Apply filter</button>
-      </div>
+      <label class="field compact"><span>Year</span><input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" placeholder="YYYY"></label>
+      <label class="field compact"><span>Month</span><input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" placeholder="MM"></label>
+      <button type="submit" class="btn btn-primary btn-small">Apply</button>
     </form>
-    {% if months %}
-    <nav class="pills mt" aria-label="Available months">
-      <a class="pill{% if not year and not month %} is-active{% endif %}" href="/bank-movements?year=&amp;month={% if account_id %}&amp;account_id={{ account_id }}{% endif %}">All periods</a>
-      {% for y, m in months[:18] %}
-      <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/bank-movements?{% if account_id %}account_id={{ account_id }}&amp;{% endif %}year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
-      {% endfor %}
-    </nav>
+    {% if report.total_rows and can_export %}
+    <a class="btn btn-secondary btn-small" href="/bank-movements.csv{% if account_id or year %}?{% endif %}{% if account_id %}account_id={{ account_id }}{% endif %}{% if account_id and year %}&amp;{% endif %}{% if year and month %}year={{ year }}&amp;month={{ month }}{% endif %}">{{ icon('download') }}CSV</a>
     {% endif %}
   </div>
-</section>
+  {% if months %}
+  <nav class="pills head-pills" aria-label="Available months">
+    <a class="pill{% if not year and not month %} is-active{% endif %}" href="/bank-movements?year=&amp;month={% if account_id %}&amp;account_id={{ account_id }}{% endif %}">All</a>
+    {% for y, m in months[:18] %}
+    <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/bank-movements?{% if account_id %}account_id={{ account_id }}&amp;{% endif %}year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+</header>
 
 <section class="kpis" aria-label="Movement totals">
   <div class="kpi tone-green">
