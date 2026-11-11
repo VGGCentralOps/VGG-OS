@@ -41,22 +41,22 @@
 {% if report %}
 {% set diffs = report.rows|selectattr("difference")|list %}
 <section class="kpis" aria-label="Month summary">
-  <div class="kpi">
+  <div class="kpi tone-blue">
     <span class="kpi-top"><span class="kpi-label">Month</span><span class="kpi-icon">{{ icon('clock') }}</span></span>
     <span class="kpi-value">{{ period(year, month) }}</span>
     <span class="kpi-hint">Advancly</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-violet">
     <span class="kpi-top"><span class="kpi-label">Accounts</span><span class="kpi-icon">{{ icon('list') }}</span></span>
     <span class="kpi-value">{{ report.rows|length }}</span>
     <span class="kpi-hint">On either side</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-amber">
     <span class="kpi-top"><span class="kpi-label">Differences</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
     <span class="kpi-value">{{ diffs|length }}</span>
     <span class="kpi-hint">Non-zero vs control total</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-green">
     <span class="kpi-top"><span class="kpi-label">Local sum</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
     <span class="kpi-value tabular">{{ report.local_sum_text or "—" }}</span>
     <span class="kpi-hint">Accounts with loaded lines only</span>

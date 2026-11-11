@@ -6,30 +6,31 @@
 {% set bank_ok = "bank:read" in scopes %}
 <header class="page-head">
   <div>
+    <p class="eyebrow">Workspace</p>
     <h1>Overview</h1>
   </div>
 </header>
 
 <section class="kpis" aria-label="Key figures">
-  <a class="kpi" href="/books" data-prefetch>
+  <a class="kpi tone-blue" href="/books" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
     <span class="kpi-value">{{ n(company_count) }}</span>
   </a>
   {% if bank_ok %}
-  <a class="kpi" href="/bank-accounts" data-prefetch>
+  <a class="kpi tone-teal" href="/bank-accounts" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Bank accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
     <span class="kpi-value">{{ n(bank_count) }}</span>
   </a>
-  <a class="kpi" href="/bank-movements" data-prefetch>
+  <a class="kpi tone-green" href="/bank-movements" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Bank movements</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
     <span class="kpi-value">{{ n(movement_count) if movement_count is defined else "—" }}</span>
   </a>
-  <a class="kpi" href="/bank-accounts" data-prefetch>
+  <a class="kpi tone-amber" href="/bank-accounts" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Open items</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
     <span class="kpi-value">{{ n(task_count) }}</span>
   </a>
   {% endif %}
-  <a class="kpi" href="/repositories" data-prefetch>
+  <a class="kpi tone-violet" href="/repositories" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Library files</span><span class="kpi-icon">{{ icon('folder') }}</span></span>
     <span class="kpi-value">{{ n(file_count) }}</span>
   </a>

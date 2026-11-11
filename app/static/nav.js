@@ -47,12 +47,14 @@
   /* Slim progress bar for full page navigations and form posts. */
   var bar = document.getElementById("progress");
   function startProgress() {
+    document.body.classList.add("is-navigating");
     if (!bar) return;
     bar.classList.remove("is-done");
     void bar.offsetWidth;
     bar.classList.add("is-active");
   }
   function stopProgress() {
+    document.body.classList.remove("is-navigating");
     if (!bar) return;
     bar.classList.remove("is-active");
     bar.classList.add("is-done");

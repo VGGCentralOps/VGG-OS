@@ -19,23 +19,23 @@
 {% set companies = companies or [] %}
 {% set dataset_counts = dataset_counts or [] %}
 <section class="kpis" aria-label="Loaded books">
-  <div class="kpi">
+  <div class="kpi tone-blue">
     <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
     <span class="kpi-value">{{ n(totals.companies) }}</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-violet">
     <span class="kpi-top"><span class="kpi-label">G/L accounts</span><span class="kpi-icon">{{ icon('list') }}</span></span>
     <span class="kpi-value">{{ n(totals.accounts) }}</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-teal">
     <span class="kpi-top"><span class="kpi-label">Bank accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
     <span class="kpi-value">{{ n(totals.bank_accounts) }}</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-green">
     <span class="kpi-top"><span class="kpi-label">G/L entries</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
     <span class="kpi-value">{{ n(totals.gl_entries) }}</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-amber">
     <span class="kpi-top"><span class="kpi-label">Bank ledger</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
     <span class="kpi-value">{{ n(totals.bank_ledger_entries) }}</span>
   </div>

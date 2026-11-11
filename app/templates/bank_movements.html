@@ -46,12 +46,12 @@
 </section>
 
 <section class="kpis" aria-label="Movement totals">
-  <div class="kpi">
+  <div class="kpi tone-green">
     <span class="kpi-top"><span class="kpi-label">Entries</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
     <span class="kpi-value">{{ n(report.total_rows) }}</span>
     <span class="kpi-hint">{% if report.truncated %}Showing first {{ report.rows|length }}{% else %}In this filter{% endif %}</span>
   </div>
-  <div class="kpi">
+  <div class="kpi tone-teal">
     <span class="kpi-top"><span class="kpi-label">Accounts in filter</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
     <span class="kpi-value">{{ n(report.summary|length) }}</span>
     <span class="kpi-hint">Book ledger only</span>

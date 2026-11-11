@@ -20,8 +20,8 @@
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
   <script src="/static/theme.js?v=16"></script>
-  <link rel="stylesheet" href="/static/app.css?v=16">
-  <script src="/static/nav.js?v=16" defer></script>
+  <link rel="stylesheet" href="/static/app.css?v=17">
+  <script src="/static/nav.js?v=17" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -43,7 +43,7 @@
     </div>
     <nav class="side-nav" aria-label="Primary">
       {% if can_books %}
-      <div class="nav-group">
+      <div class="nav-group tone-books">
         <span class="nav-label">Books</span>
         {{ navlink("/", "Overview", "overview", path == "/") }}
         {{ navlink("/books", "Books", "books", path.startswith("/books")) }}
@@ -51,19 +51,19 @@
       </div>
       {% endif %}
       {% if can_bank %}
-      <div class="nav-group">
+      <div class="nav-group tone-banks">
         <span class="nav-label">Banks</span>
         {{ navlink("/bank-accounts", "Bank accounts", "bank", path.startswith("/bank-accounts")) }}
         {{ navlink("/bank-movements", "Movements", "movements", path.startswith("/bank-movements")) }}
       </div>
       {% endif %}
       {% if can_books %}
-      <div class="nav-group">
+      <div class="nav-group tone-library">
         <span class="nav-label">Library</span>
         {{ navlink("/repositories", "Repositories", "folder", path.startswith("/repositories")) }}
       </div>
       {% endif %}
-      <div class="nav-group">
+      <div class="nav-group tone-account">
         <span class="nav-label">Account</span>
         {{ navlink("/settings", "Settings", "settings", path.startswith("/settings")) }}
       </div>
