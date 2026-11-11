@@ -1,8 +1,12 @@
 {%- from "_icons.html" import icon -%}
+{%- from "_fmt.html" import period -%}
 {%- set path = request.url.path -%}
 {%- set can_books = "books:read" in scopes -%}
 {%- set can_bank = "bank:read" in scopes -%}
 {%- set initials = ((principal_name or "").split()|map("first")|join)[:2]|upper -%}
+{%- set entities = shell_entities or [] -%}
+{%- set active_entity = entities[0] if entities|length == 1 else none -%}
+{%- set period_pair = shell_period -%}
 {%- macro navlink(href, label, name, active, cls="") -%}
 <a href="{{ href }}" class="{{ cls }}{% if active %} is-active{% endif %}" data-prefetch{% if active %} aria-current="page"{% endif %} title="{{ label }}">{{ icon(name) }}<span class="nav-text">{{ label }}</span></a>
 {%- endmacro -%}
@@ -15,13 +19,13 @@
   <meta name="color-scheme" content="light dark">
   <meta name="referrer" content="same-origin">
   <title>{% block title %}VGG OS{% endblock %}</title>
-  <meta name="theme-color" content="#edf9fd">
+  <meta name="theme-color" content="#f5f7f7">
   <meta name="application-name" content="VGG OS">
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
   <script src="/static/theme.js?v=16"></script>
-  <link rel="stylesheet" href="/static/app.css?v=26">
-  <script src="/static/nav.js?v=26" defer></script>
+  <link rel="stylesheet" href="/static/app.css?v=27">
+  <script src="/static/nav.js?v=27" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -42,8 +46,9 @@
     <nav class="side-nav" aria-label="Primary">
       {% if can_books %}
       <div class="nav-group tone-books">
-        <span class="nav-label">Books</span>
+        <span class="nav-label">Finance</span>
         {{ navlink("/", "Overview", "overview", path == "/") }}
+        {{ navlink("/reports", "Reports", "list", path.startswith("/reports")) }}
         {{ navlink("/books", "Books", "books", path.startswith("/books")) }}
         {{ navlink("/trial-balance", "Trial balance", "scale", path.startswith("/trial-balance")) }}
       </div>
@@ -87,6 +92,34 @@
         <span class="wordmark">VGG OS</span>
       </a>
     </header>
+    {% if entities or period_pair %}
+    <div class="contextbar" aria-label="Reporting context">
+      <div class="context-item">
+        <span class="context-label">Entity</span>
+        {% if active_entity %}
+        <strong class="context-value">{{ active_entity.name }}</strong>
+        <span class="context-meta mono">{{ active_entity.code }}</span>
+        {% elif entities %}
+        <strong class="context-value">{{ entities|length }} companies</strong>
+        <a class="context-link" href="/books" data-prefetch>Books</a>
+        {% else %}
+        <strong class="context-value">No company loaded</strong>
+        {% endif %}
+      </div>
+      <div class="context-item">
+        <span class="context-label">Period</span>
+        {% if period_pair %}
+        <strong class="context-value">{{ period(period_pair[0], period_pair[1]) }}</strong>
+        <a class="context-link" href="/trial-balance?year={{ period_pair[0] }}&amp;month={{ period_pair[1] }}" data-prefetch>Trial balance</a>
+        {% if can_bank %}
+        <a class="context-link" href="/bank-movements?year={{ period_pair[0] }}&amp;month={{ period_pair[1] }}" data-prefetch>Movements</a>
+        {% endif %}
+        {% else %}
+        <strong class="context-value">No period yet</strong>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
     <main id="main" class="content" tabindex="-1">
       {% block body %}{% endblock %}
     </main>
@@ -96,8 +129,8 @@
 <nav class="tabbar" aria-label="Primary">
   {% if can_books %}
   {{ navlink("/", "Overview", "overview", path == "/") }}
+  {{ navlink("/reports", "Reports", "list", path.startswith("/reports")) }}
   {{ navlink("/books", "Books", "books", path.startswith("/books")) }}
-  {{ navlink("/trial-balance", "Trial bal.", "scale", path.startswith("/trial-balance")) }}
   {% endif %}
   {% if can_bank %}
   {{ navlink("/bank-accounts", "Banks", "bank", path.startswith("/bank-accounts")) }}
@@ -111,9 +144,12 @@
         <span class="who-text"><span class="who-name">{{ principal_name }}</span><span class="who-meta">Signed in</span></span>
       </div>
       {% endif %}
-      {{ navlink("/settings", "Settings", "settings", path.startswith("/settings")) }}
+      {% if can_books %}
+      {{ navlink("/trial-balance", "Trial balance", "scale", path.startswith("/trial-balance")) }}
+      {{ navlink("/repositories", "Repositories", "folder", path.startswith("/repositories")) }}
+      {% endif %}
       {% if can_bank %}{{ navlink("/bank-movements", "Bank movements", "movements", path.startswith("/bank-movements")) }}{% endif %}
-      {% if can_books %}{{ navlink("/repositories", "Repositories", "folder", path.startswith("/repositories")) }}{% endif %}
+      {{ navlink("/settings", "Settings", "settings", path.startswith("/settings")) }}
       <form method="post" action="/logout">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <button type="submit" class="signout">{{ icon('logout') }}<span>Sign out</span></button>

@@ -8,14 +8,14 @@
 <div class="dash">
   <header class="page-head">
     <div>
-      <p class="eyebrow">Workspace</p>
+      <p class="eyebrow">Finance</p>
       <h1>Overview</h1>
-      <p class="lead">Group books, banks, and library at a glance.</p>
+      <p class="lead">Coverage, open items, and recent activity for the loaded companies.</p>
     </div>
     <div class="page-actions">
+      <a class="btn btn-secondary btn-small" href="/reports" data-prefetch>{{ icon('list') }}Reports</a>
       <a class="btn btn-secondary btn-small" href="/books" data-prefetch>{{ icon('books') }}Books</a>
       {% if bank_ok %}<a class="btn btn-secondary btn-small" href="/bank-movements" data-prefetch>{{ icon('movements') }}Movements</a>{% endif %}
-      <a class="btn btn-secondary btn-small" href="/repositories" data-prefetch>{{ icon('folder') }}Library</a>
     </div>
   </header>
 
@@ -24,11 +24,12 @@
       <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
       <span class="kpi-value">{{ n(company_count) }}</span>
     </a>
-    <a class="kpi tone-violet" href="/books" data-prefetch>
-      <span class="kpi-top"><span class="kpi-label">G/L accounts</span><span class="kpi-icon">{{ icon('list') }}</span></span>
-      <span class="kpi-value">{{ n(account_count) }}</span>
+    <a class="kpi tone-green" href="/reports" data-prefetch>
+      <span class="kpi-top"><span class="kpi-label">Reports</span><span class="kpi-icon">{{ icon('list') }}</span></span>
+      <span class="kpi-value">{{ n(report_count) }}</span>
+      <span class="kpi-hint">{{ n(published_report_count) }} published · {{ n(pending_report_count) }} pending</span>
     </a>
-    <a class="kpi tone-green" href="/trial-balance" data-prefetch>
+    <a class="kpi tone-violet" href="/trial-balance" data-prefetch>
       <span class="kpi-top"><span class="kpi-label">G/L entries</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
       <span class="kpi-value">{{ n(gl_count) }}</span>
     </a>

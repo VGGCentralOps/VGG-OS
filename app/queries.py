@@ -295,6 +295,22 @@ def report_catalogue(conn) -> list[dict]:
     ).fetchall()
 
 
+def shell_entities(conn) -> list[dict]:
+    return conn.execute(
+        """
+        SELECT e.code, e.name
+        FROM core.entity e
+        JOIN source.company c ON c.entity_id = e.id
+        ORDER BY e.name
+        """
+    ).fetchall()
+
+
+def shell_period(conn) -> tuple[int, int] | None:
+    months = loaded_months(conn)
+    return months[0] if months else None
+
+
 def advancly_bank_count(conn) -> int:
     row = conn.execute(
         """
@@ -391,6 +407,8 @@ def overview_board(conn) -> dict:
         item = dict(task)
         item["title"] = TASK_TITLES.get(item.get("mismatch_code"), item.get("mismatch_code") or "Open item")
         tasks.append(item)
+    catalogue = report_catalogue(conn)
+    published = sum(1 for row in catalogue if row.get("catalogue_status") == "PUBLISHED")
     return {
         "totals": totals,
         "companies": companies[:6],
@@ -398,6 +416,9 @@ def overview_board(conn) -> dict:
         "task_count": open_task_count(conn),
         "bank_count": advancly_bank_count(conn),
         "movement_count": movement_count(conn),
+        "report_count": len(catalogue),
+        "published_report_count": published,
+        "pending_report_count": pending_report_count(conn),
         "file_count": conn.execute(
             "SELECT count(*) AS n FROM finance.repository_node WHERE kind = 'file'"
         ).fetchone()["n"],
@@ -406,6 +427,8 @@ def overview_board(conn) -> dict:
         "recent_gl": recent_gl_lines(conn),
         "trial_months": loaded_months(conn)[:8],
         "movement_months": movement_months(conn)[:8],
+        "shell_entities": shell_entities(conn),
+        "shell_period": shell_period(conn),
     }
 
 

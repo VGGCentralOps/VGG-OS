@@ -1,33 +1,63 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% from "_chip.html" import chip %}
 {% block title %}Reports · VGG OS{% endblock %}
 {% block body %}
+{% set rows = reports or [] %}
+{% set published = rows|selectattr("catalogue_status", "equalto", "PUBLISHED")|list %}
+{% set pending = rows|rejectattr("catalogue_status", "equalto", "PUBLISHED")|list %}
 <header class="page-head">
   <div>
-    <p class="eyebrow">Reports</p>
-    <h1>Report catalogue</h1>
-    <p class="lead">Named reports for the group pack.</p>
+    <p class="eyebrow">Finance</p>
+    <h1>Reports</h1>
+    <p class="lead">Catalogue of named management and operating reports.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary btn-small" href="/repositories" data-prefetch>{{ icon('folder') }}Library files</a>
   </div>
 </header>
 
+<section class="kpis" aria-label="Catalogue summary">
+  <div class="kpi tone-blue">
+    <span class="kpi-top"><span class="kpi-label">Reports</span><span class="kpi-icon">{{ icon('list') }}</span></span>
+    <span class="kpi-value">{{ rows|length }}</span>
+  </div>
+  <div class="kpi tone-green">
+    <span class="kpi-top"><span class="kpi-label">Published</span><span class="kpi-icon">{{ icon('check') }}</span></span>
+    <span class="kpi-value">{{ published|length }}</span>
+  </div>
+  <div class="kpi tone-amber">
+    <span class="kpi-top"><span class="kpi-label">Pending</span><span class="kpi-icon">{{ icon('clock') }}</span></span>
+    <span class="kpi-value">{{ pending|length }}</span>
+  </div>
+</section>
+
 <section class="card">
   <div class="card-head">
-    <div class="card-title"><div><h2>Catalogue</h2><p class="meta">{{ reports|length }} reports</p></div></div>
+    <div class="card-title">{{ icon('list') }}<div><h2>Catalogue</h2><p class="meta">From the SQL pack report register</p></div></div>
   </div>
-  <div class="table-wrap mid">
+  {% if rows %}
+  <div class="table-wrap tall">
     <table class="data">
       <thead><tr><th>Name</th><th>Code</th><th>Cadence</th><th>Status</th></tr></thead>
       <tbody>
-        {% for report in reports %}
+        {% for report in rows %}
         <tr>
           <td>{{ report.name }}</td>
           <td class="mono">{{ report.code }}</td>
           <td>{{ report.cadence or "—" }}</td>
-          <td>{{ chip('ready', 'Pending') }}</td>
+          <td>
+            {% if report.catalogue_status == "PUBLISHED" %}{{ chip('ok', 'Published') }}
+            {% elif report.catalogue_status == "PENDING" %}{{ chip('waiting', 'Pending') }}
+            {% else %}{{ chip('ready', report.catalogue_status or '—') }}{% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="empty">{{ icon('inbox') }}<p>No reports are registered in the catalogue.</p></div>
+  {% endif %}
 </section>
 {% endblock %}

@@ -1,19 +1,19 @@
-/* VGG OS — group product shell. Light paper, logo blue + logo green from VGG Tools.
+/* VGG OS — group product shell. Quiet paper surface, VGG Tools blue + green.
    CSP: this file is the product stylesheet. Templates carry no style attributes. */
 
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap");
 
-/* ---------- Tokens (VGG Tools parent) ---------- */
+/* ---------- Tokens ---------- */
 :root {
   color-scheme: light;
   --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Plus Jakarta Sans", "Manrope", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", "SF Mono", "Segoe UI Mono", ui-monospace, Menlo, monospace;
 
-  --bg: #e8f6fb;
-  --bg-mesh-1: rgba(41, 138, 194, 0.34);
-  --bg-mesh-2: rgba(92, 190, 60, 0.26);
-  --bg-mesh-3: rgba(109, 92, 231, 0.16);
+  --bg: #f5f7f7;
+  --bg-mesh-1: rgba(41, 138, 194, 0.16);
+  --bg-mesh-2: rgba(15, 154, 168, 0.10);
+  --bg-mesh-3: rgba(88, 190, 60, 0.08);
 
   --ink: #182935;
   --ink-soft: #1c2b36;
@@ -23,34 +23,34 @@
   --brand: #298ac2;
   --brand-strong: #1f6f9e;
   --brand-glow: #2c9cdd;
-  --brand-soft: rgba(41, 138, 194, 0.12);
-  --brand-ring: rgba(41, 138, 194, 0.28);
+  --brand-soft: rgba(41, 138, 194, 0.10);
+  --brand-ring: rgba(41, 138, 194, 0.22);
   --on-brand: #ffffff;
   --accent-green: #58be3c;
   --accent-wash: #e1f4dc;
 
-  --glass: rgba(255, 255, 255, 0.72);
-  --glass-strong: rgba(255, 255, 255, 0.92);
-  --glass-border: rgba(188, 218, 225, 0.9);
-  --glass-edge: rgba(24, 41, 53, 0.06);
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-strong: rgba(255, 255, 255, 0.94);
+  --glass-border: rgba(188, 218, 225, 0.75);
+  --glass-edge: rgba(24, 41, 53, 0.05);
   --surface: #ffffff;
   --surface-solid: #ffffff;
-  --surface-sunken: #e4f1f6;
-  --line: #bcdae1;
-  --line-strong: rgba(24, 41, 53, 0.18);
-  --row-hover: rgba(41, 138, 194, 0.06);
-  --zebra: rgba(24, 41, 53, 0.02);
+  --surface-sunken: #eef3f4;
+  --line: #d2e2e7;
+  --line-strong: rgba(24, 41, 53, 0.16);
+  --row-hover: rgba(41, 138, 194, 0.05);
+  --zebra: rgba(24, 41, 53, 0.015);
 
   --ok: #1a9948;      --ok-bg: rgba(26, 153, 72, 0.12);
   --warn: #f59f0a;    --warn-bg: rgba(245, 159, 10, 0.16);
   --err: #dc2828;     --err-bg: rgba(220, 40, 40, 0.10);
   --info: #298ac2;    --info-bg: rgba(41, 138, 194, 0.10);
-  --neutral-bg: #e4f1f6;
+  --neutral-bg: #eef3f4;
 
-  --blur: saturate(140%) blur(16px);
-  --shadow-sm: 0 1px 2px rgba(41, 138, 194, 0.06);
-  --shadow: 0 2px 10px rgba(41, 138, 194, 0.08);
-  --shadow-lg: 0 8px 32px rgba(41, 138, 194, 0.12);
+  --blur: saturate(130%) blur(14px);
+  --shadow-sm: 0 1px 2px rgba(24, 41, 53, 0.04);
+  --shadow: 0 2px 10px rgba(24, 41, 53, 0.06);
+  --shadow-lg: 0 8px 28px rgba(24, 41, 53, 0.08);
 
   --r-sm: 6px;
   --r: 8px;
@@ -598,6 +598,35 @@ html[data-theme="dark"] .wordmark {
   background-clip: border-box;
 }
 .topbar-status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; min-width: 0; }
+.contextbar {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.65rem 1.25rem;
+  width: 100%; max-width: 1400px;
+  margin: 0.75rem auto 0; padding: 0.55rem 0.85rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--tone-teal-soft));
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+@media (max-width: 900px) {
+  .contextbar { margin-inline: var(--pad); width: auto; }
+}
+.context-item {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.55rem;
+  min-width: 0;
+}
+.context-label {
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--faint);
+}
+.context-value {
+  font: 700 0.9rem/1.2 var(--font-display); color: var(--ink);
+}
+.context-meta { color: var(--muted); font-size: 0.8rem; }
+.context-link {
+  font-size: 0.78rem; font-weight: 600; color: var(--brand-strong);
+}
+.context-link:hover { text-decoration: underline; }
 .content {
   flex: 1;
   width: 100%; max-width: 1400px;

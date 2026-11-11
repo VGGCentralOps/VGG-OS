@@ -31,7 +31,10 @@ from app.queries import (
     open_tasks,
     overview_board,
     register_rows,
+    report_catalogue,
     books_inventory,
+    shell_entities,
+    shell_period,
     trial_balance,
 )
 from app.rate_limit import RateLimiter
@@ -174,6 +177,10 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
 
     def page(request: Request, session: SessionView, name: str, **context):
         scopes = session.scopes
+        if "shell_entities" not in context or "shell_period" not in context:
+            with db() as conn:
+                context.setdefault("shell_entities", shell_entities(conn))
+                context.setdefault("shell_period", shell_period(conn))
         context.update(
             {
                 "request": request,
@@ -306,6 +313,9 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 "task_count": board.get("task_count", 0),
                 "file_count": board.get("file_count", 0),
                 "movement_count": board.get("movement_count", 0),
+                "report_count": board.get("report_count", 0),
+                "published_report_count": board.get("published_report_count", 0),
+                "pending_report_count": board.get("pending_report_count", 0),
                 "companies": board.get("companies") or [],
                 "tasks": board.get("tasks") or [],
                 "library": board.get("library") or [],
@@ -313,6 +323,8 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 "recent_gl": board.get("recent_gl") or [],
                 "trial_months": board.get("trial_months") or [],
                 "movement_months_list": board.get("movement_months") or [],
+                "shell_entities": board.get("shell_entities") or [],
+                "shell_period": board.get("shell_period"),
             }
         return page(request, session, "overview.html", **payload)
 
@@ -336,12 +348,14 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             }
         return page(request, session, "books.html", **payload)
 
-    @app.get("/reports")
+    @app.get("/reports", response_class=HTMLResponse)
     def reports(request: Request):
         session = guard(request, "books:read")
         if not isinstance(session, SessionView):
             return session
-        return RedirectResponse("/repositories", status_code=303)
+        with db() as conn:
+            rows = report_catalogue(conn)
+        return page(request, session, "reports.html", reports=rows)
 
     def repository_location(parent, error: str = "") -> str:
         base = "/repositories" if parent is None else f"/repositories/{parent}"
