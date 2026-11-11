@@ -32,17 +32,17 @@
     });
   });
 
-  /* Theme toggle (light / dark). Shared with theme.js. */
-  document.addEventListener("click", function (event) {
-    var toggle = event.target.closest && event.target.closest("[data-theme-toggle]");
-    if (!toggle) return;
-    if (window.vggosTheme && typeof window.vggosTheme.toggle === "function") {
-      window.vggosTheme.toggle();
-    }
-  });
+  /* Theme choice lives in Settings. Sync radios after paint. */
   if (window.vggosTheme && typeof window.vggosTheme.apply === "function") {
     window.vggosTheme.apply();
   }
+  document.addEventListener("change", function (event) {
+    var input = event.target;
+    if (!(input && input.matches && input.matches('input[name="theme"][data-theme-choice]'))) return;
+    if (window.vggosTheme && typeof window.vggosTheme.set === "function") {
+      window.vggosTheme.set(input.value);
+    }
+  });
 
   /* Slim progress bar for full page navigations and form posts. */
   var bar = document.getElementById("progress");

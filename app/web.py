@@ -198,7 +198,7 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    def guard(request: Request, scope: str):
+    def signed_in(request: Request):
         found = resolved(request)
         if found.session is None:
             response = RedirectResponse("/login", status_code=303)
@@ -206,11 +206,17 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 clear_session_cookie(response, secure=cookie_is_secure(request))
             response.headers["Cache-Control"] = "no-store"
             return response
-        if scope not in found.session.scopes:
-            response = page(request, found.session, "forbidden.html")
+        return found.session
+
+    def guard(request: Request, scope: str):
+        session = signed_in(request)
+        if not isinstance(session, SessionView):
+            return session
+        if scope not in session.scopes:
+            response = page(request, session, "forbidden.html")
             response.status_code = 403
             return response
-        return found.session
+        return session
 
     def guard_api(request: Request, scope: str):
         found = resolved(request)
@@ -305,6 +311,13 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 "last_run": last_run(conn),
             }
         return page(request, session, "overview.html", **payload)
+
+    @app.get("/settings", response_class=HTMLResponse)
+    def settings_page(request: Request):
+        session = signed_in(request)
+        if not isinstance(session, SessionView):
+            return session
+        return page(request, session, "settings.html")
 
     @app.get("/books", response_class=HTMLResponse)
     def books(request: Request):
