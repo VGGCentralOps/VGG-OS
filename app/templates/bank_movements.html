@@ -50,12 +50,17 @@
   <div class="kpi tone-green">
     <span class="kpi-top"><span class="kpi-label">Entries</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
     <span class="kpi-value">{{ n(report.total_rows) }}</span>
-    <span class="kpi-hint">{% if report.truncated %}Showing first {{ report.rows|length }}{% else %}In this filter{% endif %}</span>
+    <span class="kpi-hint">{% if report.truncated %}First {{ report.rows|length }} shown{% elif year and month %}{{ period(year, month) }}{% else %}All periods{% endif %}</span>
   </div>
   <div class="kpi tone-teal">
-    <span class="kpi-top"><span class="kpi-label">Accounts in filter</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
+    <span class="kpi-top"><span class="kpi-label">Accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
     <span class="kpi-value">{{ n(report.summary|length) }}</span>
     <span class="kpi-hint">In this filter</span>
+  </div>
+  <div class="kpi tone-blue">
+    <span class="kpi-top"><span class="kpi-label">Lines loaded</span><span class="kpi-icon">{{ icon('list') }}</span></span>
+    <span class="kpi-value">{{ n(report.rows|length) }}</span>
+    <span class="kpi-hint">On this page</span>
   </div>
 </section>
 
@@ -112,7 +117,7 @@
             {% elif row.direction == 'out' %}{{ chip('attention', 'Out') }}
             {% else %}{{ chip('waiting', '—') }}{% endif %}
           </td>
-          <td class="num tabular">{{ row.amount_text }}</td>
+          <td class="num tabular{% if row.direction == 'in' %} amount-in{% elif row.direction == 'out' %} amount-out{% endif %}">{{ row.amount_text }}</td>
           <td class="num tabular">{{ row.amount_lcy_text }}</td>
           <td>
             {% if row.reversed %}{{ chip('attention', 'Reversed') }}
@@ -129,7 +134,7 @@
   <div class="card-body"><p class="muted small">Showing the newest {{ report.rows|length }} of {{ report.total_rows }} rows. Export CSV for the full filter.</p></div>
   {% endif %}
   {% else %}
-  <div class="empty">{{ icon('inbox') }}<p>No bank ledger entries match this filter yet.</p></div>
+  <div class="empty">{{ icon('inbox') }}<p>No bank ledger entries match this filter.</p></div>
   {% endif %}
 </section>
 {% endblock %}

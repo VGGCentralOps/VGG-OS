@@ -623,7 +623,7 @@ def books_inventory(conn) -> dict:
     ).fetchall()
     gl_entries = conn.execute(
         """
-        SELECT e.name AS company_name, g.posting_date, g.document_reference, g.amount, a.account_code
+        SELECT e.name AS company_name, g.posting_date, g.document_reference, g.amount, a.account_code, a.account_name
         FROM finance.gl_entry g
         JOIN core.entity e ON e.id = g.entity_id
         LEFT JOIN finance.account a ON a.id = g.account_id
@@ -633,12 +633,14 @@ def books_inventory(conn) -> dict:
         """,
         (BOOKS_SAMPLE,),
     ).fetchall()
+    for row in gl_entries:
+        row["amount_text"] = money_text(row["amount"])
     bank_ledger = []
     if _has_bank_ledger(conn):
         bank_ledger = conn.execute(
             """
             SELECT e.name AS company_name, l.posting_date, l.document_number, l.description,
-                   l.amount, l.currency_code, a.account_display
+                   l.amount, l.currency_code, a.account_display, a.bank_name
             FROM finance.bank_ledger_entry l
             JOIN core.entity e ON e.id = l.entity_id
             LEFT JOIN finance.bank_account a ON a.id = l.bank_account_id
@@ -648,6 +650,8 @@ def books_inventory(conn) -> dict:
             """,
             (BOOKS_SAMPLE,),
         ).fetchall()
+        for row in bank_ledger:
+            row["amount_text"] = money_text(row["amount"])
     master_samples = conn.execute(
         """
         SELECT e.name AS company_name, m.entity_set, m.record_id, m.business_key

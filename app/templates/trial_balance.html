@@ -80,7 +80,7 @@
           {% for row in report.rows %}
           <tr>
             <td class="mono">{{ row.code }}</td>
-            <td class="wrap">{{ row.name or "Name missing" }}</td>
+            <td class="wrap">{{ row.name or "—" }}</td>
             <td class="num{% if row.local_amount is none %} missing{% endif %}">{{ row.local_text }}</td>
             <td class="num{% if row.bc_amount is none %} missing{% endif %}">{{ row.bc_text }}</td>
             <td class="num{% if row.difference is none %} missing{% elif row.difference != 0 %} diff-nonzero{% else %} diff-zero{% endif %}">{{ row.difference_text }}</td>
@@ -127,5 +127,9 @@
     {% endif %}
   </aside>
 </div>
+{% else %}
+<section class="card">
+  <div class="empty">{{ icon('inbox') }}<p>No trial balance months are available.</p></div>
+</section>
 {% endif %}
 {% endblock %}

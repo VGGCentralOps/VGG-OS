@@ -16,33 +16,26 @@ from fastapi.templating import Jinja2Templates
 from psycopg.types.json import Json
 
 from app.appraisal import default_client
-from app.constants import ADVANCLY_DIMENSION_CODES, ADVANCLY_WORKBOOK_NAME, SQL_PACK_VERSION
+from app.constants import ADVANCLY_DIMENSION_CODES, SQL_PACK_VERSION
 from app.db import app_connection
 from app.feeds import FeedClosed, MonoClient, StatementFileDrop
 from app.iam_config import CSRF_COOKIE, SESSION_COOKIE, AuthKeyRefused, require_anon_key
 from app.jwks import JwksCache
 from app.login_flow import cookie_is_secure, establish_session, issue_form_csrf, read_sign_in, same
 from app.queries import (
-    advancly_bank_count,
     bank_movements,
     dormancy_rule,
-    last_run,
-    latest_probe,
     loaded_months,
     movement_accounts,
-    movement_count,
     movement_months,
-    open_task_count,
     open_tasks,
     overview_board,
     register_rows,
     books_inventory,
-    sync_runs,
     trial_balance,
 )
 from app.rate_limit import RateLimiter
 from app.repository import (
-    file_count,
     MAX_BYTES,
     add_file,
     add_folder,
@@ -336,22 +329,9 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if not isinstance(session, SessionView):
             return session
         with db() as conn:
-            runs = sync_runs(conn)
-            probe = latest_probe(conn)
             inventory = books_inventory(conn)
-            entity_sets = None
-            if probe and isinstance(probe.get("entity_sets"), dict):
-                entity_sets = probe["entity_sets"].get("matches")
             payload = {
-                "runs": runs,
-                "probe": probe,
-                "entity_sets": entity_sets,
-                "blockers": current.connection_blockers(),
-                "expected_id": current.company_key(),
-                "expected_name": ADVANCLY_WORKBOOK_NAME,
                 "dimensions": ADVANCLY_DIMENSION_CODES,
-                "sync_running": _SYNC["running"],
-                "secret_reference": current.bc_secret_reference,
                 **inventory,
             }
         return page(request, session, "books.html", **payload)

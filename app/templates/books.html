@@ -1,9 +1,26 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "_chip.html" import chip %}
-{% from "_fmt.html" import n %}
+{% from "_fmt.html" import n, when %}
 {% block title %}Books · VGG OS{% endblock %}
 {% block body %}
+{% set totals = totals or {"companies": 0, "accounts": 0, "bank_accounts": 0, "gl_entries": 0, "bank_ledger_entries": 0} %}
+{% set companies = companies or [] %}
+{% set dataset_counts = dataset_counts or [] %}
+{% set gl_entries = gl_entries or [] %}
+{% set bank_ledger = bank_ledger or [] %}
+{% set dataset_labels = {
+  "generalLedgerSetups": "G/L setups",
+  "accountingPeriods": "Accounting periods",
+  "glAccounts": "G/L accounts",
+  "dimensions": "Dimensions",
+  "dimensionValues": "Dimension values",
+  "dimensionSetEntries": "Dimension sets",
+  "bankAccounts": "Bank accounts",
+  "glEntries": "G/L entries",
+  "bankAccountLedgerEntries": "Bank ledger entries",
+  "glBalancesByPeriod": "G/L balances by period"
+} %}
 <header class="page-head">
   <div>
     <p class="eyebrow">Books</p>
@@ -12,13 +29,11 @@
   </div>
   <div class="page-actions">
     <a class="btn btn-secondary" href="/trial-balance" data-prefetch>{{ icon('scale') }}Trial balance</a>
+    <a class="btn btn-secondary" href="/bank-accounts" data-prefetch>{{ icon('bank') }}Banks</a>
   </div>
 </header>
 
-{% set totals = totals or {"companies": 0, "accounts": 0, "bank_accounts": 0, "gl_entries": 0, "bank_ledger_entries": 0} %}
-{% set companies = companies or [] %}
-{% set dataset_counts = dataset_counts or [] %}
-<section class="kpis" aria-label="Loaded books">
+<section class="kpis" aria-label="Books summary">
   <div class="kpi tone-blue">
     <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
     <span class="kpi-value">{{ n(totals.companies) }}</span>
@@ -41,18 +56,17 @@
   </div>
 </section>
 
-<div class="stack-gap">
+<div class="dash-grid">
   <section class="card" id="companies">
     <div class="card-head">
       <div class="card-title">{{ icon('books') }}<div><h2>Companies</h2><p class="meta">Entity codes and ledger volume</p></div></div>
     </div>
     {% if companies %}
-    <div class="table-wrap tall">
+    <div class="table-wrap mid">
       <table class="data">
         <thead>
           <tr>
             <th>Company</th>
-            <th>Code</th>
             <th class="num">Accounts</th>
             <th class="num">Banks</th>
             <th class="num">G/L</th>
@@ -63,27 +77,78 @@
         <tbody>
           {% for row in companies %}
           <tr>
-            <td>{{ row.entity_name }}</td>
-            <td class="mono small">{{ row.entity_code }}</td>
+            <td>{{ row.entity_name }}<div class="cell-sub mono">{{ row.entity_code }}</div></td>
             <td class="num">{{ n(row.accounts or 0) }}</td>
             <td class="num">{{ n(row.bank_accounts or 0) }}</td>
             <td class="num">{{ n(row.gl_entries or 0) }}</td>
             <td class="num">{{ n(row.bank_ledger_entries or 0) }}</td>
-            <td class="nowrap tabular">{% if row.gl_from %}{{ row.gl_from }} → {{ row.gl_to }}{% else %}—{% endif %}</td>
+            <td class="nowrap tabular small">{% if row.gl_from %}{{ row.gl_from }} → {{ row.gl_to }}{% else %}—{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-    <div class="empty">{{ icon('inbox') }}<p>No company books are available yet.</p></div>
+    <div class="empty">{{ icon('inbox') }}<p>No company books are available.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">{{ icon('scale') }}<div><h2>Recent G/L</h2><p class="meta">Newest {{ sample_limit or 25 }} lines</p></div></div>
+      <a class="btn btn-ghost btn-small" href="/trial-balance" data-prefetch>Trial balance</a>
+    </div>
+    {% if gl_entries %}
+    <div class="table-wrap mid">
+      <table class="data">
+        <thead><tr><th>Posted</th><th>Account</th><th>Document</th><th class="num">Amount</th></tr></thead>
+        <tbody>
+          {% for row in gl_entries %}
+          <tr>
+            <td class="nowrap tabular">{{ when(row.posting_date, false) }}</td>
+            <td class="mono">{{ row.account_code or "—" }}<div class="cell-sub">{{ row.account_name or row.company_name }}</div></td>
+            <td class="small">{{ row.document_reference or "—" }}</td>
+            <td class="num tabular">{{ row.amount_text }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">{{ icon('inbox') }}<p>No G/L lines.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">{{ icon('movements') }}<div><h2>Recent bank ledger</h2><p class="meta">Newest {{ sample_limit or 25 }} lines</p></div></div>
+      <a class="btn btn-ghost btn-small" href="/bank-movements" data-prefetch>Movements</a>
+    </div>
+    {% if bank_ledger %}
+    <div class="table-wrap mid">
+      <table class="data">
+        <thead><tr><th>Posted</th><th>Account</th><th>Description</th><th class="num">Amount</th></tr></thead>
+        <tbody>
+          {% for row in bank_ledger %}
+          <tr>
+            <td class="nowrap tabular">{{ when(row.posting_date, false) }}</td>
+            <td>{{ row.bank_name or row.company_name }}<div class="cell-sub mono">{{ row.account_display or "—" }}</div></td>
+            <td class="wrap small">{{ row.description or row.document_number or "—" }}</td>
+            <td class="num tabular">{{ row.amount_text }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">{{ icon('inbox') }}<p>No bank ledger lines.</p></div>
     {% endif %}
   </section>
 
   {% if dataset_counts %}
   <section class="card" id="datasets">
     <div class="card-head">
-      <div class="card-title">{{ icon('list') }}<div><h2>Datasets</h2><p class="meta">Master-record counts by dataset</p></div></div>
+      <div class="card-title">{{ icon('list') }}<div><h2>Datasets</h2><p class="meta">Master-record counts</p></div></div>
     </div>
     <div class="table-wrap mid">
       <table class="data">
@@ -91,7 +156,7 @@
         <tbody>
           {% for row in dataset_counts %}
           <tr>
-            <td>{{ row.entity_set }}</td>
+            <td>{{ dataset_labels.get(row.entity_set, row.entity_set) }}</td>
             <td class="num">{{ n(row.n) }}</td>
             <td>{% if row.n %}{{ chip('ok', 'Ready') }}{% else %}{{ chip('warn', 'Empty') }}{% endif %}</td>
           </tr>
@@ -104,7 +169,7 @@
 
   {% if dimensions %}
   <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('filter') }}<h2>Cost and revenue centres</h2></div></div>
+    <div class="card-head"><div class="card-title">{{ icon('filter') }}<div><h2>Cost and revenue centres</h2><p class="meta">Dimension codes in use</p></div></div></div>
     <div class="table-wrap mid">
       <table class="data">
         <thead><tr><th>Kind</th><th>Code</th><th>Name</th></tr></thead>

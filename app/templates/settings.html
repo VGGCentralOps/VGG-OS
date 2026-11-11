@@ -4,9 +4,33 @@
 {% block body %}
 <div class="prefs">
   <header class="prefs-head">
+    <p class="eyebrow">Account</p>
     <h1>Settings</h1>
-    <p class="lead">Stored in this browser only.</p>
+    <p class="lead">Preferences for this browser.</p>
   </header>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">{{ icon('settings') }}<div><h2>Session</h2><p class="meta">Signed-in identity</p></div></div>
+    </div>
+    <div class="card-body">
+      <dl class="kv">
+        <dt>Name</dt><dd>{{ principal_name or "—" }}</dd>
+        <dt>Access</dt>
+        <dd>
+          {% if scopes %}
+          <div class="pills">
+            {% for scope in scopes %}
+            <span class="pill is-active">{{ scope }}</span>
+            {% endfor %}
+          </div>
+          {% else %}
+          —
+          {% endif %}
+        </dd>
+      </dl>
+    </div>
+  </section>
 
   <section class="card">
     <div class="card-head">

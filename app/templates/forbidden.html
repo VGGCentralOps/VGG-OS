@@ -1,13 +1,21 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Not permitted · VGG OS{% endblock %}
 {% block body %}
-<header class="page-header">
-  <div class="page-title">
-    <span class="tick" aria-hidden="true"></span>
-    <div>
-      <h1>Not permitted</h1>
-      <p>Your account does not have access to this screen.</p>
+<div class="prefs">
+  <header class="prefs-head">
+    <p class="eyebrow">Access</p>
+    <h1>Not permitted</h1>
+    <p class="lead">Your account does not have access to this screen.</p>
+  </header>
+  <section class="card">
+    <div class="card-body">
+      <div class="empty">
+        {{ icon('shield') }}
+        <p>Return to Overview or ask an administrator for access.</p>
+        <a class="btn btn-primary btn-small" href="/" data-prefetch>Back to Overview</a>
+      </div>
     </div>
-  </div>
-</header>
+  </section>
+</div>
 {% endblock %}

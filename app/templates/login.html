@@ -26,8 +26,8 @@
   <meta name="twitter:image" content="https://vggos.vgg.tools/static/og.jpg">
   <link rel="icon" href="/static/favicon.png">
   <script src="/static/theme.js?v=16"></script>
-  <link rel="stylesheet" href="/static/app.css?v=24">
-  <script src="/static/nav.js?v=24" defer></script>
+  <link rel="stylesheet" href="/static/app.css?v=25">
+  <script src="/static/nav.js?v=25" defer></script>
 </head>
 <body class="gate">
   <div class="gate-shell">
@@ -51,7 +51,7 @@
             <img class="logo" src="/static/vgg-logo.webp" alt="Venture Garden Group">
           </div>
           <h2>Sign in</h2>
-          <p class="auth-lead">Use your Venture Garden credentials to enter VGG OS.</p>
+          <p class="auth-lead">Sign in with your Venture Garden account.</p>
           {% if error %}<p class="gate-error">{{ error }}</p>{% endif %}
           <form method="post" action="/api/session" class="stack" data-signin>
             <input type="hidden" name="csrf_token" value="{{ csrf }}">

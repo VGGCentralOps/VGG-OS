@@ -20,8 +20,8 @@
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
   <script src="/static/theme.js?v=16"></script>
-  <link rel="stylesheet" href="/static/app.css?v=24">
-  <script src="/static/nav.js?v=24" defer></script>
+  <link rel="stylesheet" href="/static/app.css?v=25">
+  <script src="/static/nav.js?v=25" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -82,7 +82,10 @@
 
   <div class="main">
     <header class="topbar glass">
-      <a class="mobile-brand" href="/"><img class="logo" src="/static/vgg-logo.webp" alt="" width="34" height="24"><span class="wordmark">VGG OS</span></a>
+      <a class="mobile-brand" href="/" data-prefetch>
+        <img class="logo" src="/static/vgg-logo.webp" alt="" width="34" height="24">
+        <span class="wordmark">VGG OS</span>
+      </a>
     </header>
     <main id="main" class="content" tabindex="-1">
       {% block body %}{% endblock %}
