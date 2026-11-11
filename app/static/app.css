@@ -668,8 +668,9 @@ body.gate {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  padding: clamp(4.5rem, 12vh, 8rem) clamp(1.75rem, 4vw, 3.5rem) clamp(1.75rem, 4vw, 3.5rem);
+  justify-content: center;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  padding-bottom: clamp(4rem, 12vh, 8rem);
   overflow: hidden;
 }
 .gate-bubbles {
