@@ -15,7 +15,7 @@ The database password and the token encryption key are written to `%LOCALAPPDATA
 
 Sign in at `http://127.0.0.1:8096` with the appraisal email and password. `POST /api/session` is the only login. The browser cookie is an OS session id: `HttpOnly` and `SameSite=Lax`. On HTTPS it is also `Secure`. Password reset stays on the appraisal site. Browser origins for this service are `http://127.0.0.1:8096`, `http://localhost:8096`, `https://vggos.vgg.tools`, and `https://vgg-os.onrender.com`. They are not appraisal redirect URLs. The public name `vggos.vgg.tools` is DNS only.
 
-While appraisal sign-in is being repaired, one local database account works on that same form. `python scripts/seed_temp_logins.py` creates `admin@vggos.local` with every current scope so data can be pulled before role-based access exists. The password is in the secrets file as `VGGOS_TEMP_ADMIN_PASSWORD`. These sessions do not call the appraisal project. Set `VGGOS_TEMP_DB_LOGIN=0` and restart to ignore that account. Remove `iam.temp_credential` when it is no longer needed.
+Sign-in is limited to permitted accounts in `iam.temp_credential`. `python scripts/seed_temp_logins.py` keeps `admin@vggos.local` and creates the production operator `ops@vggos.vgg.tools`. Passwords stay in the secrets file (`VGGOS_TEMP_ADMIN_PASSWORD`, `VGGOS_OPERATOR_PASSWORD`). These sessions do not call the appraisal project. Appraisal password login stays off until you set `VGGOS_APPRAISAL_LOGIN=1` and load a finance allowlist. Set `VGGOS_TEMP_DB_LOGIN=0` only when appraisal login is ready to replace these accounts.
 
 ## Business Central
 

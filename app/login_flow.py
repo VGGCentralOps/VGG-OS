@@ -174,6 +174,11 @@ def establish_session(request: Request, email: str, password: str, csrf_token: s
             log.warning("Temporary database sign-in could not be checked (%s).", type(exc).__name__)
             return LoginResult(503, UNAVAILABLE)
 
+    if not settings.appraisal_login:
+        # Only seeded permitted accounts can sign in until appraisal allowlist login is enabled.
+        log.info("Sign-in rejected: appraisal password login is disabled.")
+        return LoginResult(401, GENERIC)
+
     key = key_bytes(settings.token_key)
     if not settings.auth_anon_key or not settings.auth_url or key is None:
         return LoginResult(503, NOT_CONFIGURED)

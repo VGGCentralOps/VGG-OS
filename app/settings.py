@@ -46,6 +46,7 @@ class Settings:
     auth_anon_key: str
     token_key: str
     temp_db_login: bool
+    appraisal_login: bool = False
     bc_allow_private_http: bool = False
     bc_entity_map: str = ""
     trusted_proxy_hops: int = 0
@@ -148,6 +149,7 @@ def load_settings() -> Settings:
         auth_anon_key=pick("VGG_AUTH_ANON_KEY"),
         token_key=pick("VGGOS_TOKEN_KEY"),
         temp_db_login=_enabled(pick("VGGOS_TEMP_DB_LOGIN", "1")),
+        appraisal_login=_enabled(pick("VGGOS_APPRAISAL_LOGIN", "0")),
         bc_allow_private_http=pick("VGGOS_BC_ALLOW_PRIVATE_HTTP", "0").strip() == "1",
         bc_entity_map=pick("VGGOS_BC_ENTITY_MAP"),
         trusted_proxy_hops=_hops(pick("VGGOS_TRUSTED_PROXY_HOPS", "0")),

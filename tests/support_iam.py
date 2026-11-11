@@ -101,6 +101,8 @@ def iam_settings(**overrides) -> Settings:
     values["auth_url"] = "https://qnorggoycwbbxdlvbcvq.supabase.co"
     values["auth_anon_key"] = forge_api_key("anon")
     values["token_key"] = TOKEN_KEY
+    # Tests exercise appraisal grant flow unless a case overrides this.
+    values["appraisal_login"] = True
     values.update(overrides)
     return Settings(**values)
 

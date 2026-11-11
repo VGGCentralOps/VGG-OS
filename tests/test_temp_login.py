@@ -83,7 +83,7 @@ def test_temp_db_login_rejects_a_wrong_password_without_appraisal(monkeypatch):
 
 def test_temp_db_login_can_be_turned_off(monkeypatch):
     monkeypatch.setenv("VGGOS_TEMP_DB_LOGIN", "0")
-    settings = iam_settings(temp_db_login=False)
+    settings = iam_settings(temp_db_login=False, appraisal_login=True)
     _prepare(settings)
     try:
         with appraisal_app(APPRAISAL_SUBJECT, EMAIL, seed=False) as (client, fake, _app_settings, _access, _refresh, _private, _document):
