@@ -206,8 +206,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   padding: 0.35rem 0.35rem 0.55rem; min-height: 2.75rem;
 }
 .brand-row .logo,
-.mobile-brand .logo,
-.gate-mark .logo {
+.mobile-brand .logo {
   height: 32px; width: auto; flex: none;
   padding: 0.2rem 0.35rem; border-radius: 8px;
   background: var(--logo-plate);
@@ -974,14 +973,9 @@ body.is-signing-in .btn-signin {
     min-height: auto;
     justify-content: flex-start;
     gap: 1rem;
-    padding: 4.75rem 1.25rem 1rem;
+    padding: 1.5rem 1.25rem 1rem;
   }
   .gate-bubble { opacity: 0.55; }
-  .gate-mark {
-    top: 1.15rem;
-    left: 1.25rem;
-  }
-  .gate-mark .logo { height: 36px; }
   .gate-copy { padding-top: 0; padding-bottom: 0.25rem; }
   .gate-copy .product { font-size: clamp(2.1rem, 9vw, 2.8rem); margin-bottom: 0.55rem; }
   .gate-copy .aside { margin-top: 0.75rem; }
@@ -992,6 +986,7 @@ body.is-signing-in .btn-signin {
     padding: 1.35rem 1.25rem 2rem;
     align-items: flex-start;
   }
+  .auth-brand .logo { height: 40px; }
 }
 
 /* ---------- Motion ---------- */
