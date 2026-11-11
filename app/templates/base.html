@@ -12,17 +12,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="light">
   <meta name="referrer" content="same-origin">
   <title>{% block title %}VGG OS{% endblock %}</title>
-  <meta name="theme-color" content="#eaf3ee" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0b1613" media="(prefers-color-scheme: dark)">
-  <link rel="preload" href="/static/fonts/outfit-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/static/fonts/outfit-600.woff2" as="font" type="font/woff2" crossorigin>
+  <meta name="theme-color" content="#edf9fd">
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
-  <link rel="stylesheet" href="/static/app.css?v=3">
-  <script src="/static/nav.js?v=3" defer></script>
+  <link rel="stylesheet" href="/static/app.css?v=4">
+  <script src="/static/nav.js?v=4" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -30,10 +27,10 @@
 <div class="shell">
   <aside class="sidebar glass" aria-label="Main navigation">
     <div class="brand-row">
-      <img class="logo" src="/static/vgg-logo.webp" alt="" width="40" height="28">
+      <img class="logo" src="/static/vgg-logo.webp" alt="Venture Garden Group" width="40" height="28">
       <div class="brand-text">
         <a class="wordmark" href="/">VGG OS</a>
-        <span class="brand-sub">Finance</span>
+        <span class="brand-sub">Venture Garden</span>
       </div>
       <button type="button" class="collapse-btn" data-collapse aria-label="Collapse navigation" aria-expanded="true">{{ icon('chevron-left') }}</button>
     </div>
