@@ -4,16 +4,37 @@
 {% from "_fmt.html" import when, n %}
 {% block title %}Bank accounts · VGG OS{% endblock %}
 {% block body %}
+{% set no_feed = grouped["IN_BC_NO_FEED"] %}
+{% set no_register = grouped["FEED_WITHOUT_BC"] %}
+{% set stale = grouped["LINKED_STALE"] %}
+{% set open_total = (no_feed|length) + (no_register|length) + (stale|length) %}
+{% set with_entries = rows|selectattr("entries", "gt", 0)|list %}
 <header class="page-head">
   <div>
+    <p class="eyebrow">Banks</p>
     <h1>Bank accounts</h1>
-    <p class="lead">Group bank register — owning entity, currency, and ledger activity.</p>
+    <p class="lead">Register, ownership, and ledger activity.</p>
   </div>
   <div class="page-actions">
     <a class="btn btn-secondary" href="/bank-movements" data-prefetch>{{ icon('movements') }}Movements</a>
     {% if can_export %}<a class="btn btn-secondary" href="/bank-accounts.csv">{{ icon('download') }}Export</a>{% endif %}
   </div>
 </header>
+
+<section class="kpis" aria-label="Register summary">
+  <div class="kpi tone-teal">
+    <span class="kpi-top"><span class="kpi-label">Accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
+    <span class="kpi-value">{{ n(rows|length) }}</span>
+  </div>
+  <div class="kpi tone-green">
+    <span class="kpi-top"><span class="kpi-label">With activity</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
+    <span class="kpi-value">{{ n(with_entries|length) }}</span>
+  </div>
+  <div class="kpi tone-amber">
+    <span class="kpi-top"><span class="kpi-label">Open items</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
+    <span class="kpi-value">{{ n(open_total) }}</span>
+  </div>
+</section>
 
 <section class="card">
   <div class="card-head">
@@ -28,8 +49,8 @@
     <table class="data">
       <thead>
         <tr>
-          <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th><th>Source id</th>
-          <th>Owner</th><th>Route</th><th>Link</th><th class="num">Entries</th><th>Last posted</th><th>List</th>
+          <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th><th>External id</th>
+          <th>Owner</th><th>Route</th><th>Link</th><th class="num">Entries</th><th>Last posted</th><th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -40,12 +61,12 @@
           <td>{{ row.bank_name }}</td>
           <td class="mono">{{ row.currency_code }}</td>
           <td class="mono small">{{ row.bc_account_id }}</td>
-          <td class="muted">{{ row.accountable_owner or "Not named" }}</td>
+          <td class="muted">{{ row.accountable_owner or "—" }}</td>
           <td>{{ chip('ready', row.data_route) }}</td>
           <td>{{ chip('waiting', row.link_status) }}</td>
           <td class="num"><a href="/bank-movements?account_id={{ row.bank_account_id }}">{{ n(row.entries) }}</a></td>
           <td class="nowrap tabular">{{ when(row.last_posting_date, false) }}</td>
-          <td>{% if row.in_latest_bc_list %}In latest list{% else %}Not in latest list{% endif %}{% if not row.active %}, blocked{% endif %}</td>
+          <td>{% if row.in_latest_bc_list %}Current{% else %}Missing from list{% endif %}{% if not row.active %} · blocked{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -58,26 +79,26 @@
 
 <div class="grid-2">
   <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>In the register, no feed</h2></div></div>
+    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>In register, no feed</h2></div><span class="count{% if no_feed %} is-hot{% endif %}">{{ no_feed|length }}</span></div>
     <div class="card-body">
-      {% if grouped["IN_BC_NO_FEED"] %}
-      <ul class="list-plain">{% for task in grouped["IN_BC_NO_FEED"] %}<li>{{ chip('waiting', 'Open') }}<span class="grow">{{ task.detail }}</span></li>{% endfor %}</ul>
+      {% if no_feed %}
+      <ul class="list-plain">{% for task in no_feed %}<li>{{ chip('waiting', 'Open') }}<span class="grow">{{ task.detail }}</span></li>{% endfor %}</ul>
       {% else %}<p class="empty-inline">None.</p>{% endif %}
     </div>
   </section>
   <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>Feed with no register account</h2></div></div>
+    <div class="card-head"><div class="card-title">{{ icon('alert') }}<h2>Feed without register</h2></div><span class="count{% if no_register %} is-hot{% endif %}">{{ no_register|length }}</span></div>
     <div class="card-body">
-      {% if grouped["FEED_WITHOUT_BC"] %}
-      <ul class="list-plain">{% for task in grouped["FEED_WITHOUT_BC"] %}<li>{{ chip('attention', 'Open') }}<span class="grow">{{ task.detail }} <code>{{ task.feed_reference }}</code></span></li>{% endfor %}</ul>
+      {% if no_register %}
+      <ul class="list-plain">{% for task in no_register %}<li>{{ chip('attention', 'Open') }}<span class="grow">{{ task.detail }}{% if task.feed_reference %} <code>{{ task.feed_reference }}</code>{% endif %}</span></li>{% endfor %}</ul>
       {% else %}<p class="empty-inline">None.</p>{% endif %}
     </div>
   </section>
   <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('clock') }}<h2>Linked but stale</h2></div></div>
+    <div class="card-head"><div class="card-title">{{ icon('clock') }}<h2>Linked but stale</h2></div><span class="count{% if stale %} is-hot{% endif %}">{{ stale|length }}</span></div>
     <div class="card-body">
-      {% if grouped["LINKED_STALE"] %}
-      <ul class="list-plain">{% for task in grouped["LINKED_STALE"] %}<li>{{ chip('waiting', 'Open') }}<span class="grow">{{ task.detail }}</span></li>{% endfor %}</ul>
+      {% if stale %}
+      <ul class="list-plain">{% for task in stale %}<li>{{ chip('waiting', 'Open') }}<span class="grow">{{ task.detail }}</span></li>{% endfor %}</ul>
       {% else %}<p class="empty-inline">None.</p>{% endif %}
     </div>
   </section>
@@ -85,7 +106,7 @@
     <div class="card-head"><div class="card-title">{{ icon('shield') }}<h2>Dormancy</h2></div></div>
     <div class="card-body">
       <p class="empty-inline">No account is flagged dormant.</p>
-      {% if rule %}<p class="muted small mt">Stored rule remains disabled until Treasury signs thresholds.</p>{% endif %}
+      {% if rule %}<p class="muted small mt">Rule stored for group default{% if not rule.enabled %} · currently off{% endif %}.</p>{% endif %}
     </div>
   </section>
 </div>

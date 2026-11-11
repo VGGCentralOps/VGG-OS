@@ -1,37 +1,206 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% from "_fmt.html" import n %}
+{% from "_chip.html" import chip %}
+{% from "_fmt.html" import n, when, period %}
 {% block title %}Overview · VGG OS{% endblock %}
 {% block body %}
 {% set bank_ok = "bank:read" in scopes %}
-<header class="page-head">
-  <div>
-    <h1>Overview</h1>
-  </div>
-</header>
+<div class="dash">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Workspace</p>
+      <h1>Overview</h1>
+      <p class="lead">Group books, banks, and library at a glance.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn btn-secondary btn-small" href="/books" data-prefetch>{{ icon('books') }}Books</a>
+      {% if bank_ok %}<a class="btn btn-secondary btn-small" href="/bank-movements" data-prefetch>{{ icon('movements') }}Movements</a>{% endif %}
+      <a class="btn btn-secondary btn-small" href="/repositories" data-prefetch>{{ icon('folder') }}Library</a>
+    </div>
+  </header>
 
-<section class="kpis" aria-label="Key figures">
-  <a class="kpi tone-blue" href="/books" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
-    <span class="kpi-value">{{ n(company_count) }}</span>
-  </a>
-  {% if bank_ok %}
-  <a class="kpi tone-teal" href="/bank-accounts" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Bank accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
-    <span class="kpi-value">{{ n(bank_count) }}</span>
-  </a>
-  <a class="kpi tone-green" href="/bank-movements" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Bank movements</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
-    <span class="kpi-value">{{ n(movement_count) if movement_count is defined else "—" }}</span>
-  </a>
-  <a class="kpi tone-amber" href="/bank-accounts" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Open items</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
-    <span class="kpi-value">{{ n(task_count) }}</span>
-  </a>
-  {% endif %}
-  <a class="kpi tone-violet" href="/repositories" data-prefetch>
-    <span class="kpi-top"><span class="kpi-label">Library files</span><span class="kpi-icon">{{ icon('folder') }}</span></span>
-    <span class="kpi-value">{{ n(file_count) }}</span>
-  </a>
-</section>
+  <section class="kpis" aria-label="Key figures">
+    <a class="kpi tone-blue" href="/books" data-prefetch>
+      <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
+      <span class="kpi-value">{{ n(company_count) }}</span>
+    </a>
+    <a class="kpi tone-violet" href="/books" data-prefetch>
+      <span class="kpi-top"><span class="kpi-label">G/L accounts</span><span class="kpi-icon">{{ icon('list') }}</span></span>
+      <span class="kpi-value">{{ n(account_count) }}</span>
+    </a>
+    <a class="kpi tone-green" href="/trial-balance" data-prefetch>
+      <span class="kpi-top"><span class="kpi-label">G/L entries</span><span class="kpi-icon">{{ icon('scale') }}</span></span>
+      <span class="kpi-value">{{ n(gl_count) }}</span>
+    </a>
+    {% if bank_ok %}
+    <a class="kpi tone-teal" href="/bank-accounts" data-prefetch>
+      <span class="kpi-top"><span class="kpi-label">Bank accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
+      <span class="kpi-value">{{ n(bank_count) }}</span>
+    </a>
+    <a class="kpi tone-amber" href="/bank-accounts" data-prefetch>
+      <span class="kpi-top"><span class="kpi-label">Open items</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
+      <span class="kpi-value">{{ n(task_count) }}</span>
+    </a>
+    {% endif %}
+    <a class="kpi tone-violet" href="/repositories" data-prefetch>
+      <span class="kpi-top"><span class="kpi-label">Library files</span><span class="kpi-icon">{{ icon('folder') }}</span></span>
+      <span class="kpi-value">{{ n(file_count) }}</span>
+    </a>
+  </section>
+
+  <div class="dash-grid">
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('books') }}<div><h2>Companies</h2><p class="meta">Ledger volume by entity</p></div></div>
+        <a class="btn btn-ghost btn-small" href="/books" data-prefetch>Open</a>
+      </div>
+      {% if companies %}
+      <div class="table-wrap mid">
+        <table class="data">
+          <thead><tr><th>Company</th><th class="num">Accounts</th><th class="num">Banks</th><th class="num">G/L</th><th>G/L range</th></tr></thead>
+          <tbody>
+            {% for row in companies %}
+            <tr>
+              <td>{{ row.entity_name }}<div class="cell-sub mono">{{ row.entity_code }}</div></td>
+              <td class="num">{{ n(row.accounts or 0) }}</td>
+              <td class="num">{{ n(row.bank_accounts or 0) }}</td>
+              <td class="num">{{ n(row.gl_entries or 0) }}</td>
+              <td class="nowrap tabular small">{% if row.gl_from %}{{ row.gl_from }} → {{ row.gl_to }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">{{ icon('inbox') }}<p>No companies are available.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('scale') }}<div><h2>Recent G/L</h2><p class="meta">Newest posting lines</p></div></div>
+        <a class="btn btn-ghost btn-small" href="/trial-balance" data-prefetch>Trial balance</a>
+      </div>
+      {% if recent_gl %}
+      <div class="table-wrap mid">
+        <table class="data">
+          <thead><tr><th>Posted</th><th>Account</th><th>Document</th><th class="num">Amount</th></tr></thead>
+          <tbody>
+            {% for row in recent_gl %}
+            <tr>
+              <td class="nowrap tabular">{{ when(row.posting_date, false) }}</td>
+              <td class="mono">{{ row.account_code or "—" }}<div class="cell-sub">{{ row.account_name or row.company_name }}</div></td>
+              <td class="small">{{ row.document_reference or "—" }}</td>
+              <td class="num tabular">{{ row.amount_text }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">{{ icon('inbox') }}<p>No G/L lines yet.</p></div>
+      {% endif %}
+      {% if trial_months %}
+      <div class="card-foot">
+        <nav class="pills" aria-label="Trial balance months">
+          {% for y, m in trial_months %}
+          <a class="pill" href="/trial-balance?year={{ y }}&amp;month={{ m }}" data-prefetch>{{ period(y, m) }}</a>
+          {% endfor %}
+        </nav>
+      </div>
+      {% endif %}
+    </section>
+
+    {% if bank_ok %}
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('bank') }}<div><h2>Active banks</h2><p class="meta">Highest ledger activity</p></div></div>
+        <a class="btn btn-ghost btn-small" href="/bank-accounts" data-prefetch>Register</a>
+      </div>
+      {% if active_banks %}
+      <div class="table-wrap mid">
+        <table class="data">
+          <thead><tr><th>Account</th><th class="num">Entries</th><th>Last posted</th></tr></thead>
+          <tbody>
+            {% for row in active_banks %}
+            <tr>
+              <td>
+                <a class="entry" href="/bank-movements?account_id={{ row.id }}" data-prefetch>{{ icon('bank') }}<span>{{ row.bank_name }}<span class="cell-sub mono">{{ row.account_display }} · {{ row.currency_code or "—" }}</span></span></a>
+              </td>
+              <td class="num">{{ n(row.entries) }}</td>
+              <td class="nowrap tabular">{{ when(row.last_posting_date, false) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">{{ icon('inbox') }}<p>No bank ledger activity yet.</p></div>
+      {% endif %}
+      {% if movement_months_list %}
+      <div class="card-foot">
+        <nav class="pills" aria-label="Movement months">
+          {% for y, m in movement_months_list %}
+          <a class="pill" href="/bank-movements?year={{ y }}&amp;month={{ m }}" data-prefetch>{{ period(y, m) }}</a>
+          {% endfor %}
+        </nav>
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('alert') }}<div><h2>Open items</h2><p class="meta">{{ n(task_count) }} in the bank register</p></div></div>
+        <a class="btn btn-ghost btn-small" href="/bank-accounts" data-prefetch>Review</a>
+      </div>
+      {% if tasks %}
+      <div class="card-body">
+        <ul class="list-plain">
+          {% for task in tasks %}
+          <li>
+            {{ chip('waiting', task.title) }}
+            <span class="grow">{{ task.detail }}{% if task.feed_reference %} <code>{{ task.feed_reference }}</code>{% endif %}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="empty">{{ icon('check') }}<p>No open bank items.</p></div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">{{ icon('folder') }}<div><h2>Library</h2><p class="meta">Recently added</p></div></div>
+        <a class="btn btn-ghost btn-small" href="/repositories" data-prefetch>Open</a>
+      </div>
+      {% if library %}
+      <div class="table-wrap mid">
+        <table class="data">
+          <thead><tr><th>Name</th><th>Kind</th><th>Size</th><th>Added</th></tr></thead>
+          <tbody>
+            {% for node in library %}
+            <tr>
+              <td>
+                {% if node.kind == 'folder' %}
+                <a class="entry" href="/repositories/{{ node.id }}" data-prefetch>{{ icon('folder') }}<span>{{ node.name }}</span></a>
+                {% else %}
+                <a class="entry" href="/repositories/{{ node.id }}/file">{{ icon('file') }}<span>{{ node.name }}</span></a>
+                {% endif %}
+              </td>
+              <td>{{ "Folder" if node.kind == "folder" else "File" }}</td>
+              <td>{{ node.size_label or "—" }}</td>
+              <td class="nowrap tabular">{{ when(node.created_at) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">{{ icon('inbox') }}<p>Library is empty.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
 {% endblock %}

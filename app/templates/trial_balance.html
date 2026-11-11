@@ -6,7 +6,8 @@
 {% block body %}
 <header class="page-head">
   <div>
-    <h1>Trial balance check</h1>
+    <p class="eyebrow">Books</p>
+    <h1>Trial balance</h1>
     <p class="lead">Monthly account movements against the control total.</p>
   </div>
   {% if report and can_export %}
@@ -16,7 +17,7 @@
   {% endif %}
 </header>
 
-<section class="card">
+<section class="card filter-bar">
   <div class="card-body">
     <div class="split">
       <form method="get" action="/trial-balance" class="form-row">
@@ -25,13 +26,13 @@
         <button type="submit" class="btn btn-primary">Show month</button>
       </form>
       {% if months %}
-      <nav class="pills" aria-label="Loaded months">
+      <nav class="pills" aria-label="Available months">
         {% for y, m in months[:18] %}
         <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/trial-balance?year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
         {% endfor %}
       </nav>
       {% else %}
-      <p class="empty-inline">No month has been loaded.</p>
+      <p class="empty-inline">No months are available yet.</p>
       {% endif %}
     </div>
   </div>
@@ -107,7 +108,7 @@
           {% endfor %}
         </ul>
         {% else %}
-        <div class="callout callout-ok">{{ icon('check') }}<p>Every loaded transaction number in this month sums to zero.</p></div>
+        <div class="callout callout-ok">{{ icon('check') }}<p>Every transaction number in this month sums to zero.</p></div>
         {% endif %}
       </div>
     </section>

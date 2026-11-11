@@ -315,6 +315,100 @@ def open_task_count(conn) -> int:
     return int(row["n"])
 
 
+TASK_TITLES = {
+    "IN_BC_NO_FEED": "In register, no feed",
+    "FEED_WITHOUT_BC": "Feed without register",
+    "LINKED_STALE": "Linked but stale",
+}
+
+
+def recent_library(conn, limit: int = 8) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT id, name, kind, size_bytes, created_at
+        FROM finance.repository_node
+        ORDER BY created_at DESC, sort_index, name
+        LIMIT %s
+        """,
+        (limit,),
+    ).fetchall()
+    for row in rows:
+        size = row["size_bytes"]
+        if row["kind"] != "file" or size is None:
+            row["size_label"] = None
+        elif size < 1024:
+            row["size_label"] = f"{size} B"
+        elif size < 1024 * 1024:
+            row["size_label"] = f"{size / 1024:.1f} KB"
+        else:
+            row["size_label"] = f"{size / (1024 * 1024):.1f} MB"
+    return rows
+
+
+def active_bank_accounts(conn, limit: int = 6) -> list[dict]:
+    if not _has_bank_ledger(conn):
+        return []
+    return conn.execute(
+        """
+        SELECT a.id, a.bank_name, a.account_display, a.currency_code,
+               COUNT(*) AS entries, MAX(l.posting_date) AS last_posting_date
+        FROM finance.bank_ledger_entry l
+        JOIN finance.bank_account a ON a.id = l.bank_account_id
+        JOIN core.entity e ON e.id = a.entity_id
+        WHERE e.code = %s AND NOT l.source_deleted
+        GROUP BY a.id, a.bank_name, a.account_display, a.currency_code
+        ORDER BY entries DESC, last_posting_date DESC NULLS LAST
+        LIMIT %s
+        """,
+        (ADVANCLY_ENTITY_CODE, limit),
+    ).fetchall()
+
+
+def recent_gl_lines(conn, limit: int = 8) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT e.name AS company_name, g.posting_date, g.document_reference, g.amount, a.account_code, a.account_name
+        FROM finance.gl_entry g
+        JOIN core.entity e ON e.id = g.entity_id
+        LEFT JOIN finance.account a ON a.id = g.account_id
+        WHERE NOT g.source_deleted
+        ORDER BY g.posting_date DESC, g.id DESC
+        LIMIT %s
+        """,
+        (limit,),
+    ).fetchall()
+    for row in rows:
+        row["amount_text"] = money_text(row["amount"])
+    return rows
+
+
+def overview_board(conn) -> dict:
+    inventory = books_inventory(conn)
+    totals = inventory.get("totals") or {}
+    companies = inventory.get("companies") or []
+    tasks = []
+    for task in open_tasks(conn)[:8]:
+        item = dict(task)
+        item["title"] = TASK_TITLES.get(item.get("mismatch_code"), item.get("mismatch_code") or "Open item")
+        tasks.append(item)
+    return {
+        "totals": totals,
+        "companies": companies[:6],
+        "tasks": tasks,
+        "task_count": open_task_count(conn),
+        "bank_count": advancly_bank_count(conn),
+        "movement_count": movement_count(conn),
+        "file_count": conn.execute(
+            "SELECT count(*) AS n FROM finance.repository_node WHERE kind = 'file'"
+        ).fetchone()["n"],
+        "library": recent_library(conn),
+        "active_banks": active_bank_accounts(conn),
+        "recent_gl": recent_gl_lines(conn),
+        "trial_months": loaded_months(conn)[:8],
+        "movement_months": movement_months(conn)[:8],
+    }
+
+
 def loaded_months(conn) -> list[tuple[int, int]]:
     rows = conn.execute(
         """

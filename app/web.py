@@ -34,6 +34,7 @@ from app.queries import (
     movement_months,
     open_task_count,
     open_tasks,
+    overview_board,
     register_rows,
     books_inventory,
     sync_runs,
@@ -302,15 +303,23 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if not isinstance(session, SessionView):
             return session
         with db() as conn:
-            inventory = books_inventory(conn)
-            totals = inventory.get("totals") or {}
+            board = overview_board(conn)
+            totals = board.get("totals") or {}
             payload = {
                 "company_count": totals.get("companies", 0),
                 "account_count": totals.get("accounts", 0),
-                "bank_count": advancly_bank_count(conn),
-                "task_count": open_task_count(conn),
-                "file_count": file_count(conn),
-                "movement_count": movement_count(conn),
+                "gl_count": totals.get("gl_entries", 0),
+                "bank_count": board.get("bank_count", 0),
+                "task_count": board.get("task_count", 0),
+                "file_count": board.get("file_count", 0),
+                "movement_count": board.get("movement_count", 0),
+                "companies": board.get("companies") or [],
+                "tasks": board.get("tasks") or [],
+                "library": board.get("library") or [],
+                "active_banks": board.get("active_banks") or [],
+                "recent_gl": board.get("recent_gl") or [],
+                "trial_months": board.get("trial_months") or [],
+                "movement_months_list": board.get("movement_months") or [],
             }
         return page(request, session, "overview.html", **payload)
 
@@ -572,6 +581,8 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             return session
         with db() as conn:
             months = loaded_months(conn)
+            if (year is None or month is None) and months:
+                year, month = months[0]
             report = None
             if year and month and 1 <= month <= 12:
                 report = trial_balance(conn, year, month)
@@ -644,6 +655,15 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         with db() as conn:
             accounts = movement_accounts(conn)
             months = movement_months(conn)
+            query = request.query_params
+            if (
+                chosen_year is None
+                and chosen_month is None
+                and months
+                and "year" not in query
+                and "month" not in query
+            ):
+                chosen_year, chosen_month = months[0]
             report = bank_movements(conn, chosen_account, chosen_year, chosen_month)
         return page(
             request,

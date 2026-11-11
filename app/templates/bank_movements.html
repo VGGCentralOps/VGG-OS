@@ -6,6 +6,7 @@
 {% block body %}
 <header class="page-head">
   <div>
+    <p class="eyebrow">Banks</p>
     <h1>Bank movements</h1>
     <p class="lead">Posted bank ledger activity by account and period.</p>
   </div>
@@ -16,7 +17,7 @@
   {% endif %}
 </header>
 
-<section class="card">
+<section class="card filter-bar">
   <div class="card-body">
     <form method="get" action="/bank-movements" class="fields">
       <label class="field">Account
@@ -30,12 +31,13 @@
       <label class="field">Year<input type="number" name="year" value="{{ year or '' }}" inputmode="numeric" min="2000" max="2100" placeholder="YYYY"></label>
       <label class="field">Month<input type="number" name="month" value="{{ month or '' }}" inputmode="numeric" min="1" max="12" placeholder="1–12"></label>
       <div class="span-all split">
-        <p class="muted small">Leave month blank to include every posting date.</p>
-        <button type="submit" class="btn btn-primary">Show movements</button>
+        <p class="muted small">Clear year and month to include every posting date.</p>
+        <button type="submit" class="btn btn-primary">Apply filter</button>
       </div>
     </form>
     {% if months %}
-    <nav class="pills mt" aria-label="Loaded months">
+    <nav class="pills mt" aria-label="Available months">
+      <a class="pill{% if not year and not month %} is-active{% endif %}" href="/bank-movements?year=&amp;month={% if account_id %}&amp;account_id={{ account_id }}{% endif %}">All periods</a>
       {% for y, m in months[:18] %}
       <a class="pill{% if y == year and m == month %} is-active{% endif %}" href="/bank-movements?{% if account_id %}account_id={{ account_id }}&amp;{% endif %}year={{ y }}&amp;month={{ m }}" {% if y == year and m == month %}aria-current="page"{% endif %}>{{ period(y, m) }}</a>
       {% endfor %}
