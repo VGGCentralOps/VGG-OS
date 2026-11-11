@@ -846,7 +846,23 @@ html[data-theme="dark"] .gate-panel {
   margin-top: 0.35rem;
   border-radius: 8px;
   font-size: 0.95rem;
-  box-shadow: 0 2px 12px rgba(41, 138, 194, 0.28);
+  background: var(--brand);
+  color: var(--on-brand);
+  border: 0;
+  box-shadow: none;
+}
+.btn-signin:hover {
+  background: var(--brand-strong);
+  box-shadow: none;
+  text-decoration: none;
+}
+.btn-signin.btn-primary {
+  background: var(--brand);
+  box-shadow: none;
+}
+.btn-signin.btn-primary:hover {
+  background: var(--brand-strong);
+  box-shadow: none;
 }
 .btn-signin .btn-idle,
 .btn-signin .btn-busy {
