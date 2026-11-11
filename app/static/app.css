@@ -254,8 +254,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   background: linear-gradient(120deg, var(--brand-strong), var(--accent-green));
   -webkit-background-clip: text; background-clip: text;
 }
-.brand-sub { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.05em; margin-top: 0.22rem; font-weight: 600; }
-
 .collapse-edge {
   position: absolute;
   top: 4.35rem;
