@@ -2,101 +2,113 @@
 {% from "_icons.html" import icon %}
 {% block title %}Repositories · VGG OS{% endblock %}
 {% block body %}
-<header class="page-head">
-  <div>
-    <p class="eyebrow">Library</p>
-    <h1>Repositories</h1>
-    <p class="lead">Prepared reports and working files. These are library documents, not live ledger facts.</p>
-  </div>
-</header>
-
-<nav class="crumbs" aria-label="Folder">
-  {% if folder %}
-  <a href="/repositories">Repositories</a>
-  {% else %}
-  <span>Repositories</span>
-  {% endif %}
-  {% for crumb in crumbs %}
-    {% if loop.last %}
-    <span aria-hidden="true">/</span> <span>{{ crumb.name }}</span>
-    {% else %}
-    <span aria-hidden="true">/</span> <a href="/repositories/{{ crumb.id }}">{{ crumb.name }}</a>
-    {% endif %}
-  {% endfor %}
-</nav>
-
-{% if notice %}
-<section class="callout callout-warn"><p>{{ notice }}</p></section>
-{% endif %}
-
-<section class="card">
-  <div class="card-head">
-    <div class="card-title">{{ icon('folder') }}<div><h2>{% if folder %}{{ folder.name }}{% else %}All folders{% endif %}</h2><p class="meta">{{ nodes|length }} item{% if nodes|length != 1 %}s{% endif %} in this folder.</p></div></div>
-  </div>
-  {% if nodes %}
-  <div class="table-wrap mid">
-    <table class="data">
-      <thead>
-        <tr><th>Name</th><th>Kind</th><th>Size</th>{% if can_write %}<th></th>{% endif %}</tr>
-      </thead>
-      <tbody>
-        {% for node in nodes %}
-        <tr>
-          <td>
-            {% if node.kind == 'folder' %}
-            <a class="entry" href="/repositories/{{ node.id }}" data-prefetch>{{ icon('folder') }}<span>{{ node.name }}</span></a>
-            {% else %}
-            <a class="entry" href="/repositories/{{ node.id }}/file">{{ icon('file') }}<span>{{ node.name }}</span></a>
-            {% endif %}
-          </td>
-          <td>{{ "Folder" if node.kind == "folder" else "File" }}</td>
-          <td>{{ node.size_label or "—" }}</td>
-          {% if can_write %}
-          <td>
-            <form method="post" action="/repositories/{{ node.id }}/delete" onsubmit="return confirm('{% if node.kind == 'folder' %}Delete this folder and everything inside it?{% else %}Delete this file?{% endif %}')">
-              <input type="hidden" name="csrf_token" value="{{ csrf }}">
-              <button type="submit" class="btn btn-secondary btn-small">Delete</button>
-            </form>
-          </td>
+<div class="library">
+  <header class="library-head">
+    <div class="library-title">
+      <p class="eyebrow">Library</p>
+      <h1>Repositories</h1>
+      <nav class="crumbs" aria-label="Folder">
+        {% if folder %}
+        <a href="/repositories" data-prefetch>Repositories</a>
+        {% else %}
+        <span class="here">Repositories</span>
+        {% endif %}
+        {% for crumb in crumbs %}
+          {% if loop.last %}
+          <span class="sep" aria-hidden="true">/</span> <span class="here">{{ crumb.name }}</span>
+          {% else %}
+          <span class="sep" aria-hidden="true">/</span> <a href="/repositories/{{ crumb.id }}" data-prefetch>{{ crumb.name }}</a>
           {% endif %}
-        </tr>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty">{{ icon('inbox') }}<p>This folder is empty.{% if can_write %} Add a file below.{% endif %}</p></div>
-  {% endif %}
-</section>
+      </nav>
+    </div>
+    <p class="library-note">Prepared reports and working files — not live ledger facts.</p>
+  </header>
 
-{% if can_write %}
-<div class="grid-2">
-  <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('file') }}<div><h2>Add a file here</h2><p class="meta">Excel, PowerPoint, Word, PDF, CSV, or an image. Up to 50 MB.</p></div></div>
-    <div class="card-body">
-      <form method="post" action="/repositories/upload" enctype="multipart/form-data" class="file-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf }}">
-        {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
-        <label class="field">File<input type="file" name="upload" required></label>
-        <button type="submit" class="btn btn-primary">Add file</button>
-      </form>
-    </div>
+  {% if notice %}
+  <section class="callout callout-warn"><p>{{ notice }}</p></section>
+  {% endif %}
+
+  {% if can_write %}
+  <section class="library-compose" aria-label="Add to this folder">
+    <form method="post" action="/repositories/upload" enctype="multipart/form-data" class="compose-tile tone-file">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
+      <div class="compose-label">
+        <span class="compose-icon">{{ icon('file') }}</span>
+        <div>
+          <strong>Add file</strong>
+          <span>Office, PDF, CSV, or image · 50 MB</span>
+        </div>
+      </div>
+      <div class="compose-row">
+        <label class="compose-file">
+          <span class="sr-only">Choose file</span>
+          <input type="file" name="upload" required>
+        </label>
+        <button type="submit" class="btn btn-primary btn-small">Upload</button>
+      </div>
+    </form>
+
+    <form method="post" action="/repositories/folder" class="compose-tile tone-folder">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
+      <div class="compose-label">
+        <span class="compose-icon">{{ icon('folder') }}</span>
+        <div>
+          <strong>New folder</strong>
+          <span>Inside the folder you have open</span>
+        </div>
+      </div>
+      <div class="compose-row">
+        <label class="sr-only" for="folder-name">Folder name</label>
+        <input id="folder-name" type="text" name="name" maxlength="240" placeholder="Folder name" required>
+        <button type="submit" class="btn btn-secondary btn-small">Create</button>
+      </div>
+    </form>
   </section>
-  <section class="card">
-    <div class="card-head"><div class="card-title">{{ icon('folder') }}<div><h2>New folder</h2><p class="meta">Creates a folder in the one you have open.</p></div></div>
-    <div class="card-body">
-      <form method="post" action="/repositories/folder" class="file-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf }}">
-        {% if folder %}<input type="hidden" name="parent_id" value="{{ folder.id }}">{% endif %}
-        <label class="field">Name<input type="text" name="name" maxlength="240" required></label>
-        <button type="submit" class="btn btn-secondary">Create folder</button>
-      </form>
+  {% else %}
+  <p class="callout">Your account can browse files but cannot upload, create folders, or delete.</p>
+  {% endif %}
+
+  <section class="card library-list">
+    <div class="card-head">
+      <div class="card-title">{{ icon('folder') }}<div><h2>{% if folder %}{{ folder.name }}{% else %}All folders{% endif %}</h2><p class="meta">{{ nodes|length }} item{% if nodes|length != 1 %}s{% endif %}</p></div></div>
     </div>
+    {% if nodes %}
+    <div class="table-wrap mid">
+      <table class="data">
+        <thead>
+          <tr><th>Name</th><th>Kind</th><th>Size</th>{% if can_write %}<th></th>{% endif %}</tr>
+        </thead>
+        <tbody>
+          {% for node in nodes %}
+          <tr>
+            <td>
+              {% if node.kind == 'folder' %}
+              <a class="entry" href="/repositories/{{ node.id }}" data-prefetch>{{ icon('folder') }}<span>{{ node.name }}</span></a>
+              {% else %}
+              <a class="entry" href="/repositories/{{ node.id }}/file">{{ icon('file') }}<span>{{ node.name }}</span></a>
+              {% endif %}
+            </td>
+            <td>{{ "Folder" if node.kind == "folder" else "File" }}</td>
+            <td>{{ node.size_label or "—" }}</td>
+            {% if can_write %}
+            <td class="action">
+              <form method="post" action="/repositories/{{ node.id }}/delete" data-confirm="{% if node.kind == 'folder' %}Delete this folder and everything inside it?{% else %}Delete this file?{% endif %}">
+                <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                <button type="submit" class="btn btn-ghost btn-small">Delete</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">{{ icon('inbox') }}<p>This folder is empty.{% if can_write %} Use Add file or New folder above.{% endif %}</p></div>
+    {% endif %}
   </section>
 </div>
-{% else %}
-<section class="card">
-  <div class="card-body"><p class="empty-inline">Your account can browse files but cannot upload, create folders, or delete.</p></div>
-</section>
-{% endif %}
 {% endblock %}
