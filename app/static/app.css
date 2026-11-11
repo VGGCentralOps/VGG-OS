@@ -541,7 +541,7 @@ body.gate {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   padding: clamp(1.75rem, 4vw, 3.5rem);
   overflow: hidden;
 }
@@ -570,7 +570,9 @@ body.gate {
   animation: gate-ring 18s linear infinite;
 }
 .gate-mark {
-  position: relative;
+  position: absolute;
+  top: clamp(1.5rem, 3.5vw, 3rem);
+  left: clamp(1.5rem, 4vw, 3.5rem);
   z-index: 1;
   display: flex;
   align-items: center;
@@ -584,7 +586,7 @@ body.gate {
   position: relative;
   z-index: 1;
   max-width: 34rem;
-  padding-bottom: 1rem;
+  padding-top: 2.5rem;
 }
 .gate-copy .product {
   margin: 0 0 0.85rem;
@@ -698,12 +700,16 @@ body.gate {
   .gate-hero {
     min-height: auto;
     justify-content: flex-start;
-    gap: 1.25rem;
-    padding: 1.35rem 1.25rem 0.75rem;
+    gap: 1rem;
+    padding: 4.75rem 1.25rem 1rem;
   }
   .gate-hero::before, .gate-hero::after { opacity: 0.45; }
-  .gate-mark .logo { height: 40px; }
-  .gate-copy { padding-bottom: 0.5rem; }
+  .gate-mark {
+    top: 1.15rem;
+    left: 1.25rem;
+  }
+  .gate-mark .logo { height: 36px; }
+  .gate-copy { padding-top: 0; padding-bottom: 0.25rem; }
   .gate-copy .product { font-size: clamp(2.1rem, 9vw, 2.8rem); margin-bottom: 0.55rem; }
   .gate-copy .aside { margin-top: 0.75rem; }
   .gate-panel {
