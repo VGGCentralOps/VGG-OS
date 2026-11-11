@@ -127,20 +127,8 @@ def _purge_email(conn, email: str) -> None:
 
 
 def new_password() -> str:
-    """A password that can be read aloud. Not written into git."""
-    words = (
-        "Amber", "Birch", "Cedar", "Delta", "Ember", "Fjord", "Granite", "Harbor",
-        "Indigo", "Juniper", "Kelvin", "Linden", "Marble", "North", "Orchid", "Pebble",
-        "Quartz", "Ridge", "Summit", "Timber", "Atlas", "Beacon", "Canyon", "Drift",
-    )
-    first = secrets.choice(words)
-    second = secrets.choice(words)
-    while second == first:
-        second = secrets.choice(words)
-    third = secrets.choice(words)
-    while third in {first, second}:
-        third = secrets.choice(words)
-    return f"{first}-{second}-{third}-{secrets.randbelow(900) + 100}"
+    """A dense production password. Not written into git."""
+    return secrets.token_urlsafe(18)
 
 
 def upsert_env(path: Path, updates: dict[str, str]) -> None:
