@@ -6,9 +6,7 @@
 {% set bank_ok = "bank:read" in scopes %}
 <header class="page-head">
   <div>
-    <p class="eyebrow">VGG OS</p>
     <h1>Overview</h1>
-    <p class="lead">Group operating surface for company records, decisions, and shared truth across Venture Garden.</p>
   </div>
 </header>
 
@@ -16,62 +14,24 @@
   <a class="kpi" href="/books" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Companies</span><span class="kpi-icon">{{ icon('books') }}</span></span>
     <span class="kpi-value">{{ n(company_count) }}</span>
-    <span class="kpi-hint">In the books workspace</span>
   </a>
   {% if bank_ok %}
   <a class="kpi" href="/bank-accounts" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Bank accounts</span><span class="kpi-icon">{{ icon('bank') }}</span></span>
     <span class="kpi-value">{{ n(bank_count) }}</span>
-    <span class="kpi-hint">Group register</span>
   </a>
   <a class="kpi" href="/bank-movements" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Bank movements</span><span class="kpi-icon">{{ icon('movements') }}</span></span>
     <span class="kpi-value">{{ n(movement_count) if movement_count is defined else "—" }}</span>
-    <span class="kpi-hint">Ledger activity</span>
   </a>
   <a class="kpi" href="/bank-accounts" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Open items</span><span class="kpi-icon">{{ icon('alert') }}</span></span>
     <span class="kpi-value">{{ n(task_count) }}</span>
-    <span class="kpi-hint">Needs follow-up</span>
   </a>
   {% endif %}
   <a class="kpi" href="/repositories" data-prefetch>
     <span class="kpi-top"><span class="kpi-label">Library files</span><span class="kpi-icon">{{ icon('folder') }}</span></span>
     <span class="kpi-value">{{ n(file_count) }}</span>
-    <span class="kpi-hint">Report library</span>
   </a>
 </section>
-
-<div class="grid-2">
-  <section class="card">
-    <div class="card-head">
-      <div class="card-title">{{ icon('overview') }}<h2>Workspace</h2></div>
-    </div>
-    <div class="card-body">
-      <ul class="list-plain">
-        <li><span class="grow"><a href="/books" data-prefetch>Books</a> — companies, accounts, and ledger coverage.</span></li>
-        {% if bank_ok %}
-        <li><span class="grow"><a href="/bank-accounts" data-prefetch>Bank accounts</a> — the group register and open follow-ups.</span></li>
-        <li><span class="grow"><a href="/bank-movements" data-prefetch>Movements</a> — bank ledger activity by period.</span></li>
-        {% endif %}
-        <li><span class="grow"><a href="/repositories" data-prefetch>Library</a> — prepared reports and working files.</span></li>
-        <li><span class="grow"><a href="/settings" data-prefetch>Settings</a> — appearance and account preferences.</span></li>
-      </ul>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="card-head">
-      <div class="card-title">{{ icon('shield') }}<h2>How to use VGG OS</h2></div>
-    </div>
-    <div class="card-body">
-      <ul class="list-plain">
-        <li><span class="grow">Treat figures here as the shared group view for decisions and review.</span></li>
-        <li><span class="grow">Missing amounts stay blank — they are never filled with zero.</span></li>
-        <li><span class="grow">Use Books, Banks, and the Library as separate spaces with one product language.</span></li>
-        <li><span class="grow">Account access is permissioned. Only people you admit can sign in.</span></li>
-      </ul>
-    </div>
-  </section>
-</div>
 {% endblock %}
