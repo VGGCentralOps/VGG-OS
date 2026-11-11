@@ -2,38 +2,38 @@
 {% from "_icons.html" import icon %}
 {% block title %}Settings · VGG OS{% endblock %}
 {% block body %}
-<header class="page-head">
-  <div>
+<div class="prefs">
+  <header class="prefs-head">
     <p class="eyebrow">Account</p>
     <h1>Settings</h1>
-    <p class="lead">Personal preferences for this browser. Theme is stored locally and does not change other people’s view.</p>
-  </div>
-</header>
+    <p class="lead">Stored in this browser only.</p>
+  </header>
 
-<section class="card">
-  <div class="card-head">
-    <div class="card-title">{{ icon('settings') }}<div><h2>Appearance</h2><p class="meta">VGG OS opens in light mode by default. Dark mode is black.</p></div></div>
-  </div>
-  <div class="card-body">
-    <fieldset class="theme-picker" data-theme-picker>
-      <legend class="sr-only">Theme</legend>
-      <label class="theme-option" data-theme-option="light">
-        <input type="radio" name="theme" value="light" data-theme-choice checked>
-        <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>
-        <span class="theme-copy">
-          <strong>Light</strong>
-          <span>Default. Cool paper with VGG blue and green.</span>
-        </span>
-      </label>
-      <label class="theme-option" data-theme-option="dark">
-        <input type="radio" name="theme" value="dark" data-theme-choice>
-        <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span>
-        <span class="theme-copy">
-          <strong>Dark</strong>
-          <span>Black surfaces. Brand accents stay for actions and status.</span>
-        </span>
-      </label>
-    </fieldset>
-  </div>
-</section>
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">{{ icon('settings') }}<div><h2>Appearance</h2><p class="meta">Light by default. Dark is black.</p></div></div>
+    </div>
+    <div class="card-body">
+      <fieldset class="theme-picker" data-theme-picker>
+        <legend class="sr-only">Theme</legend>
+        <label class="theme-option" data-theme-option="light">
+          <input type="radio" name="theme" value="light" data-theme-choice checked>
+          <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>
+          <span class="theme-copy">
+            <strong>Light</strong>
+            <span>Paper with brand accents</span>
+          </span>
+        </label>
+        <label class="theme-option" data-theme-option="dark">
+          <input type="radio" name="theme" value="dark" data-theme-choice>
+          <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span>
+          <span class="theme-copy">
+            <strong>Dark</strong>
+            <span>Black surfaces</span>
+          </span>
+        </label>
+      </fieldset>
+    </div>
+  </section>
+</div>
 {% endblock %}
