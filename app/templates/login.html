@@ -8,9 +8,9 @@
   <meta name="theme-color" content="#edf9fd">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/static/favicon.png">
-  <script src="/static/theme.js?v=10"></script>
-  <link rel="stylesheet" href="/static/app.css?v=10">
-  <script src="/static/nav.js?v=10" defer></script>
+  <script src="/static/theme.js?v=11"></script>
+  <link rel="stylesheet" href="/static/app.css?v=11">
+  <script src="/static/nav.js?v=11" defer></script>
 </head>
 <body class="gate">
   <div class="gate-shell">
@@ -19,9 +19,6 @@
         <span class="gate-bubble b1"></span>
         <span class="gate-bubble b2"></span>
         <span class="gate-bubble b3"></span>
-      </div>
-      <div class="gate-mark">
-        <img class="logo" src="/static/vgg-logo.webp" alt="Venture Garden Group">
       </div>
       <div class="gate-copy">
         <p class="product">VGG <span>OS</span></p>
@@ -33,6 +30,9 @@
     <section class="gate-panel">
       <main class="auth">
         <section class="auth-card">
+          <div class="auth-brand">
+            <img class="logo" src="/static/vgg-logo.webp" alt="Venture Garden Group">
+          </div>
           <h2>Sign in</h2>
           <p class="auth-lead">Use your Venture Garden credentials to enter VGG OS.</p>
           {% if error %}<p class="gate-error">{{ error }}</p>{% endif %}
@@ -50,10 +50,15 @@
                 <input name="password" type="password" autocomplete="current-password" required>
               </span>
             </label>
-            <button type="submit" class="btn btn-signin" data-busy="Signing in…">
+            <button type="submit" class="btn-signin" data-busy="Signing in…">
               <span class="btn-idle">
-                <span data-label>Sign in to VGG OS</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <span class="btn-signin-copy">
+                  <span data-label>Continue</span>
+                  <span class="btn-signin-sub">Enter VGG OS</span>
+                </span>
+                <span class="btn-signin-go" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </span>
               </span>
               <span class="btn-busy" aria-hidden="true">
                 <svg class="spin" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
