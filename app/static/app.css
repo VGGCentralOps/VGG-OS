@@ -668,8 +668,8 @@ body.gate {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: clamp(1.75rem, 4vw, 3.5rem);
+  justify-content: flex-start;
+  padding: clamp(3.75rem, 12vh, 7.5rem) clamp(1.75rem, 4vw, 3.5rem) clamp(1.75rem, 4vw, 3.5rem);
   overflow: hidden;
 }
 .gate-bubbles {
@@ -737,12 +737,12 @@ html[data-theme="dark"] .gate-bubble {
 .gate-copy {
   position: relative;
   z-index: 1;
-  max-width: 34rem;
+  max-width: 40rem;
 }
 .gate-copy .product {
-  margin: 0 0 0.85rem;
-  font: 800 clamp(2.6rem, 2rem + 3vw, 4.4rem)/0.95 var(--font-display);
-  letter-spacing: -0.035em;
+  margin: 0 0 1rem;
+  font: 800 clamp(3.4rem, 2.4rem + 4.2vw, 5.6rem)/0.92 var(--font-display);
+  letter-spacing: -0.04em;
   color: var(--ink);
 }
 .gate-copy .product span {
@@ -754,23 +754,23 @@ html[data-theme="dark"] .gate-bubble {
 }
 .gate-copy .statement {
   margin: 0;
-  max-width: 28ch;
-  font: 500 clamp(1.05rem, 0.95rem + 0.4vw, 1.25rem)/1.45 var(--font);
+  max-width: 30ch;
+  font: 500 clamp(1.15rem, 1rem + 0.55vw, 1.4rem)/1.4 var(--font);
   color: var(--ink-soft);
 }
 .gate-copy .aside {
-  margin-top: 1.25rem;
-  font-size: 0.9rem;
+  margin-top: 1.35rem;
+  font-size: 0.95rem;
   color: var(--muted);
-  max-width: 36ch;
+  max-width: 38ch;
 }
 .gate-panel {
   position: relative;
   z-index: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: clamp(1.25rem, 3vw, 2.5rem);
+  padding: clamp(3.5rem, 11vh, 7rem) clamp(1.25rem, 3vw, 2.5rem) clamp(1.5rem, 3vw, 2.5rem);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   border-left: 1px solid var(--line);
   box-shadow: -24px 0 48px rgba(41, 138, 194, 0.06);
@@ -790,10 +790,10 @@ html[data-theme="dark"] .gate-panel {
 .auth-brand {
   display: flex;
   align-items: center;
-  margin: 0 0 1.35rem;
+  margin: 0 0 1.1rem;
 }
 .auth-brand .logo {
-  height: 44px;
+  height: 48px;
   width: auto;
   padding: 0.35rem 0.45rem;
   border-radius: 10px;
@@ -973,20 +973,20 @@ body.is-signing-in .btn-signin {
     min-height: auto;
     justify-content: flex-start;
     gap: 1rem;
-    padding: 1.5rem 1.25rem 1rem;
+    padding: 1.35rem 1.25rem 0.85rem;
   }
   .gate-bubble { opacity: 0.55; }
   .gate-copy { padding-top: 0; padding-bottom: 0.25rem; }
-  .gate-copy .product { font-size: clamp(2.1rem, 9vw, 2.8rem); margin-bottom: 0.55rem; }
+  .gate-copy .product { font-size: clamp(2.5rem, 10vw, 3.4rem); margin-bottom: 0.55rem; }
   .gate-copy .aside { margin-top: 0.75rem; }
   .gate-panel {
     border-left: 0;
     border-top: 1px solid var(--line);
     box-shadow: none;
-    padding: 1.35rem 1.25rem 2rem;
+    padding: 1.25rem 1.25rem 2rem;
     align-items: flex-start;
   }
-  .auth-brand .logo { height: 40px; }
+  .auth-brand .logo { height: 42px; }
 }
 
 /* ---------- Motion ---------- */
