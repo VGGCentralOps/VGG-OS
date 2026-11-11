@@ -20,8 +20,8 @@
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
   <script src="/static/theme.js?v=16"></script>
-  <link rel="stylesheet" href="/static/app.css?v=17">
-  <script src="/static/nav.js?v=17" defer></script>
+  <link rel="stylesheet" href="/static/app.css?v=18">
+  <script src="/static/nav.js?v=18" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -29,18 +29,17 @@
 <div class="shell">
   <aside class="sidebar glass" aria-label="Main navigation">
     <div class="brand-row">
-      <img class="logo" src="/static/vgg-logo.webp" alt="Venture Garden Group" width="40" height="28">
-      <div class="brand-text">
-        <a class="wordmark" href="/">VGG OS</a>
-        <span class="brand-sub">Venture Garden</span>
-      </div>
+      <a class="brand-mark" href="/" data-prefetch>
+        <img class="logo" src="/static/vgg-logo.webp" alt="Venture Garden Group" width="120" height="36">
+        <span class="brand-text">
+          <span class="wordmark">VGG OS</span>
+          <span class="brand-sub">Venture Garden</span>
+        </span>
+      </a>
     </div>
-    <div class="sidebar-tools">
-      <button type="button" class="tool-btn collapse-btn" data-collapse aria-label="Collapse navigation" aria-expanded="true" title="Collapse">
-        {{ icon('chevron-left') }}
-        <span class="nav-text tool-label">Collapse</span>
-      </button>
-    </div>
+    <button type="button" class="collapse-edge" data-collapse aria-label="Collapse navigation" aria-expanded="true" title="Collapse">
+      {{ icon('chevron-left') }}
+    </button>
     <nav class="side-nav" aria-label="Primary">
       {% if can_books %}
       <div class="nav-group tone-books">

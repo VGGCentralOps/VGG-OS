@@ -19,8 +19,7 @@
     collapseBtns.forEach(function (btn) {
       btn.setAttribute("aria-expanded", on ? "false" : "true");
       btn.setAttribute("aria-label", on ? "Expand navigation" : "Collapse navigation");
-      var label = btn.querySelector(".tool-label");
-      if (label) label.textContent = on ? "Expand" : "Collapse";
+      btn.setAttribute("title", on ? "Expand" : "Collapse");
     });
   }
   applyCollapsed(store(true) === "1");
