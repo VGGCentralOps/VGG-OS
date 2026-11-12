@@ -74,11 +74,12 @@
   }
   document.addEventListener("click", function (event) {
     var link = event.target.closest && event.target.closest("a[href]");
-    if (link && isPlainNavigation(link, event)) startProgress();
+    if (link && isPlainNavigation(link, event) && !link.hasAttribute("data-entity-switch")) startProgress();
   });
 
   /* Prefetch navigation links only (sidebar, tab bar, more sheet). Never POST targets, exports or sign-out. */
   var prefetched = Object.create(null);
+  var fetchCache = Object.create(null);
   function prefetch(link) {
     var url;
     try { url = new URL(link.href, location.href); } catch (e) { return; }
@@ -89,6 +90,13 @@
     var key = path + url.search;
     if (prefetched[key]) return;
     prefetched[key] = true;
+    if (link.hasAttribute("data-entity-switch") && window.fetch) {
+      fetch(key, { credentials: "same-origin", headers: { "X-VGGOS-Partial": "1" } })
+        .then(function (response) { return response.ok ? response.text() : Promise.reject(); })
+        .then(function (html) { fetchCache[key] = html; })
+        .catch(function () {});
+      return;
+    }
     var hint = document.createElement("link");
     hint.rel = "prefetch";
     hint.href = key;
@@ -102,6 +110,94 @@
   document.addEventListener("pointerover", onIntent, { passive: true });
   document.addEventListener("focusin", onIntent);
   document.addEventListener("touchstart", onIntent, { passive: true });
+
+  function setEntityCookie(code) {
+    var secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = "vggos_entity=" + encodeURIComponent(code) + "; Path=/; Max-Age=2592000; SameSite=Lax" + secure;
+  }
+
+  function applyEntityDocument(html, url, push) {
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    var nextMain = doc.querySelector("#main");
+    var nextBar = doc.querySelector("#contextbar");
+    var main = document.querySelector("#main");
+    var barNode = document.querySelector("#contextbar");
+    if (!nextMain || !main) {
+      location.assign(url);
+      return;
+    }
+    main.replaceWith(nextMain);
+    if (nextBar && barNode) barNode.replaceWith(nextBar);
+    else if (nextBar && !barNode) {
+      var shellMain = document.querySelector(".main");
+      if (shellMain) shellMain.insertBefore(nextBar, shellMain.querySelector("#main"));
+    }
+    document.title = doc.title || document.title;
+    if (push) history.pushState({ entitySoft: true }, "", url);
+    stopProgress();
+    document.body.classList.remove("is-entity-switching");
+  }
+
+  var entitySwitching = false;
+  document.addEventListener("click", function (event) {
+    var link = event.target.closest && event.target.closest("a[data-entity-switch]");
+    if (!link || !isPlainNavigation(link, event)) return;
+    if (link.classList.contains("is-active")) {
+      event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    if (entitySwitching) return;
+    entitySwitching = true;
+    var url;
+    try { url = new URL(link.href, location.href); } catch (e) { entitySwitching = false; return; }
+    var code = link.getAttribute("data-entity") || url.searchParams.get("entity") || "";
+    if (code) setEntityCookie(code);
+    document.body.classList.add("is-entity-switching");
+    startProgress();
+    var key = url.pathname + url.search;
+    var cached = fetchCache[key];
+    var request = cached
+      ? Promise.resolve(cached)
+      : fetch(key, { credentials: "same-origin", headers: { "X-VGGOS-Partial": "1" } })
+          .then(function (response) {
+            if (!response.ok) throw new Error("switch failed");
+            return response.text();
+          });
+    request
+      .then(function (html) {
+        fetchCache[key] = html;
+        applyEntityDocument(html, key, true);
+        entitySwitching = false;
+      })
+      .catch(function () {
+        entitySwitching = false;
+        location.assign(key);
+      });
+  });
+
+  window.addEventListener("popstate", function () {
+    if (!window.fetch) return;
+    var key = location.pathname + location.search;
+    startProgress();
+    document.body.classList.add("is-entity-switching");
+    fetch(key, { credentials: "same-origin", headers: { "X-VGGOS-Partial": "1" } })
+      .then(function (response) {
+        if (!response.ok) throw new Error("nav failed");
+        return response.text();
+      })
+      .then(function (html) {
+        applyEntityDocument(html, key, false);
+      })
+      .catch(function () {
+        location.reload();
+      });
+  });
+
+  /* Warm the other company tabs as soon as the shell is ready. */
+  document.querySelectorAll("a[data-entity-switch]:not(.is-active)").forEach(function (link) {
+    prefetch(link);
+  });
 
   /* Forms: confirmation, busy state, progress. */
   document.addEventListener("submit", function (event) {

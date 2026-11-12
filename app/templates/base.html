@@ -24,8 +24,8 @@
   <link rel="icon" href="/static/favicon.png">
   {% if csrf is defined %}<meta name="csrf-token" content="{{ csrf }}">{% endif %}
   <script src="/static/theme.js?v=16"></script>
-  <link rel="stylesheet" href="/static/app.css?v=28">
-  <script src="/static/nav.js?v=28" defer></script>
+  <link rel="stylesheet" href="/static/app.css?v=29">
+  <script src="/static/nav.js?v=29" defer></script>
 </head>
 <body class="app">
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -93,27 +93,26 @@
       </a>
     </header>
     {% if entities or period_pair %}
-    <div class="contextbar" aria-label="Reporting context">
+    <div class="contextbar" id="contextbar" aria-label="Reporting context">
       <div class="context-item context-entity">
         <span class="context-label">Company</span>
-        {% if entities|length > 1 %}
-        <form method="get" action="{{ path }}" class="entity-switch" aria-label="Switch company">
-          <select name="entity" onchange="this.form.submit()">
-            {% for row in entities %}
-            <option value="{{ row.code }}"{% if active and row.code == active.code %} selected{% endif %}>{{ row.name }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% elif active %}
-        <strong class="context-value">{{ active.name }}</strong>
-        <span class="context-meta mono">{{ active.code }}</span>
+        {% if entities %}
+        <div class="company-tabs" role="tablist" aria-label="Companies">
+          {% for row in entities %}
+          <a class="company-tab{% if active and row.code == active.code %} is-active{% endif %}"
+             role="tab"
+             href="{{ path }}?entity={{ row.code }}"
+             data-entity-switch
+             data-entity="{{ row.code }}"
+             data-prefetch
+             {% if active and row.code == active.code %}aria-selected="true"{% else %}aria-selected="false"{% endif %}>
+            <span class="company-tab-name">{{ row.name }}</span>
+            {% if not row.has_gl %}<span class="company-tab-meta">Empty</span>{% endif %}
+          </a>
+          {% endfor %}
+        </div>
         {% else %}
         <strong class="context-value">No company loaded</strong>
-        {% endif %}
-        {% if active and not active.has_gl and not active.has_banks %}
-        <span class="context-chip">No ledger yet</span>
-        {% elif active and not active.has_gl %}
-        <span class="context-chip">No G/L yet</span>
         {% endif %}
       </div>
       <div class="context-item">

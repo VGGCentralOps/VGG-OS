@@ -18,7 +18,7 @@ from psycopg.types.json import Json
 from app.appraisal import default_client
 from app.constants import ADVANCLY_DIMENSION_CODES, ADVANCLY_ENTITY_CODE, SQL_PACK_VERSION
 from app.db import app_connection
-from app.entity_scope import resolve_entity, set_entity_cookie
+from app.entity_scope import ENTITY_COOKIE, resolve_entity, set_entity_cookie
 from app.feeds import FeedClosed, MonoClient, StatementFileDrop
 from app.iam_config import CSRF_COOKIE, SESSION_COOKIE, AuthKeyRefused, require_anon_key
 from app.jwks import JwksCache
@@ -213,6 +213,11 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             set_entity_cookie(response, entity_code, secure=cookie_is_secure(request))
         return response
 
+    def hinted_entity(request: Request) -> str:
+        query = (request.query_params.get("entity") or "").strip()
+        cookie = (request.cookies.get(ENTITY_COOKIE) or "").strip()
+        return query or cookie or ADVANCLY_ENTITY_CODE
+
     def active_scope(request: Request, conn) -> tuple[list[dict], dict | None, str]:
         entities = shell_entities(conn)
         active = resolve_entity(request, entities)
@@ -323,8 +328,13 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if not isinstance(session, SessionView):
             return session
         with db() as conn:
-            entities, active, entity_code = active_scope(request, conn)
-            board = overview_board(conn, entity_code)
+            hinted = hinted_entity(request)
+            board = overview_board(conn, hinted)
+            entities = board.get("shell_entities") or []
+            active = resolve_entity(request, entities)
+            entity_code = active["code"] if active else hinted
+            if active and entity_code != hinted:
+                board = overview_board(conn, entity_code, entities=entities)
             totals = board.get("totals") or {}
             payload = {
                 "company_count": totals.get("companies", 0),

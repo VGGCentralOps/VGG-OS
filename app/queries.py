@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from calendar import monthrange
 from datetime import date
 from decimal import Decimal
@@ -315,29 +316,118 @@ def report_catalogue(conn) -> list[dict]:
     ).fetchall()
 
 
-def shell_entities(conn) -> list[dict]:
+def company_coverage(conn) -> list[dict]:
+    """Per-company ledger coverage in one round trip. Used by Overview and the shell."""
     return conn.execute(
         """
-        SELECT e.code,
-               e.name,
-               EXISTS (
-                 SELECT 1 FROM finance.gl_entry g
-                 WHERE g.entity_id = e.id AND NOT g.source_deleted
-               ) AS has_gl,
-               EXISTS (
-                 SELECT 1 FROM finance.bank_account a
-                 WHERE a.entity_id = e.id
-               ) AS has_banks
+        SELECT e.id AS entity_id,
+               e.code AS entity_code,
+               e.name AS entity_name,
+               c.id AS company_id,
+               COALESCE(a.accounts, 0) AS accounts,
+               COALESCE(b.bank_accounts, 0) AS bank_accounts,
+               COALESCE(g.gl_entries, 0) AS gl_entries,
+               g.gl_from,
+               g.gl_to
         FROM core.entity e
         JOIN source.company c ON c.entity_id = e.id
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int AS accounts
+          FROM finance.account x
+          WHERE x.entity_id = e.id AND x.active IS DISTINCT FROM false
+        ) a ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int AS bank_accounts
+          FROM finance.bank_account x
+          WHERE x.entity_id = e.id
+        ) b ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int AS gl_entries,
+                 MIN(x.posting_date) AS gl_from,
+                 MAX(x.posting_date) AS gl_to
+          FROM finance.gl_entry x
+          WHERE x.entity_id = e.id AND NOT x.source_deleted
+        ) g ON true
         ORDER BY e.name
         """
     ).fetchall()
 
 
+_SHELL_ENTITIES_CACHE: tuple[float, list[dict]] | None = None
+_SHELL_ENTITIES_TTL = 30.0
+
+
+def shell_entities(conn, *, refresh: bool = False) -> list[dict]:
+    """Light company list for the shell. Cached briefly — remote DB RTT dominates."""
+    global _SHELL_ENTITIES_CACHE
+    now = time.monotonic()
+    if not refresh and _SHELL_ENTITIES_CACHE and now - _SHELL_ENTITIES_CACHE[0] < _SHELL_ENTITIES_TTL:
+        return [dict(row) for row in _SHELL_ENTITIES_CACHE[1]]
+    rows = conn.execute(
+        """
+        SELECT e.code,
+               e.name,
+               EXISTS (
+                 SELECT 1 FROM finance.bank_account a
+                 WHERE a.entity_id = e.id
+               ) AS has_banks,
+               EXISTS (
+                 SELECT 1 FROM finance.bc_gl_period_balance b
+                 JOIN source.company c2 ON c2.id = b.company_id
+                 WHERE c2.entity_id = e.id
+               ) AS has_gl
+        FROM core.entity e
+        JOIN source.company c ON c.entity_id = e.id
+        ORDER BY e.name
+        """
+    ).fetchall()
+    payload = [dict(row) for row in rows]
+    _SHELL_ENTITIES_CACHE = (now, payload)
+    return [dict(row) for row in payload]
+
+
 def shell_period(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> tuple[int, int] | None:
-    months = loaded_months(conn, entity_code)
-    return months[0] if months else None
+    row = conn.execute(
+        """
+        SELECT posting_year AS y, posting_month AS m
+        FROM finance.bc_gl_period_balance b
+        JOIN source.company c ON c.id = b.company_id
+        JOIN core.entity n ON n.id = c.entity_id
+        WHERE n.code = %s
+        ORDER BY posting_year DESC, posting_month DESC
+        LIMIT 1
+        """,
+        (entity_code,),
+    ).fetchone()
+    if row:
+        return int(row["y"]), int(row["m"])
+    row = conn.execute(
+        """
+        SELECT EXTRACT(YEAR FROM g.posting_date)::int AS y,
+               EXTRACT(MONTH FROM g.posting_date)::int AS m
+        FROM finance.gl_entry g
+        JOIN core.entity n ON n.id = g.entity_id
+        WHERE n.code = %s AND NOT g.source_deleted
+        ORDER BY g.posting_date DESC
+        LIMIT 1
+        """,
+        (entity_code,),
+    ).fetchone()
+    return (int(row["y"]), int(row["m"])) if row else None
+
+
+def shell_context(conn, entity_code: str | None = None) -> dict:
+    """Entities + period for the selected company in one round trip."""
+    entities = shell_entities(conn)
+    codes = {row["code"] for row in entities}
+    code = entity_code if entity_code in codes else (ADVANCLY_ENTITY_CODE if ADVANCLY_ENTITY_CODE in codes else (entities[0]["code"] if entities else ADVANCLY_ENTITY_CODE))
+    period = None
+    if entities:
+        # Period lookup is folded into the entities query when possible via a second statement
+        # on the same connection; keep it cheap (indexed period balance first).
+        period = shell_period(conn, code)
+    active = next((row for row in entities if row["code"] == code), None)
+    return {"shell_entities": entities, "active_entity": active, "entity_code": code, "shell_period": period}
 
 
 def entity_bank_count(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> int:
@@ -431,65 +521,182 @@ def recent_gl_lines(conn, entity_code: str = ADVANCLY_ENTITY_CODE, limit: int = 
     return rows
 
 
-def overview_board(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> dict:
-    inventory = books_inventory(conn)
-    totals = inventory.get("totals") or {}
-    companies = inventory.get("companies") or []
+def overview_board(conn, entity_code: str = ADVANCLY_ENTITY_CODE, entities: list[dict] | None = None) -> dict:
+    """Overview payload with few remote round trips (DB is often far from the app)."""
+    companies = company_coverage(conn)
     selected = next((row for row in companies if row.get("entity_code") == entity_code), None)
+    if entities is None:
+        entities = [
+            {
+                "code": row["entity_code"],
+                "name": row["entity_name"],
+                "has_gl": int(row["gl_entries"] or 0) > 0,
+                "has_banks": int(row["bank_accounts"] or 0) > 0,
+            }
+            for row in companies
+        ]
+    board = conn.execute(
+        """
+        WITH selected AS (
+          SELECT e.id AS entity_id
+          FROM core.entity e
+          WHERE e.code = %s
+        ),
+        kpi AS (
+          SELECT
+            (SELECT COUNT(*) FROM finance.report) AS report_count,
+            (SELECT COUNT(*) FROM finance.report WHERE catalogue_status = 'PUBLISHED') AS published_report_count,
+            (SELECT COUNT(*) FROM finance.report WHERE catalogue_status = 'PENDING') AS pending_report_count,
+            (SELECT COUNT(*) FROM finance.repository_node WHERE kind = 'file') AS file_count,
+            (SELECT COUNT(*) FROM ops.bank_mismatch_task WHERE status = 'OPEN') AS task_count,
+            (
+              SELECT COUNT(*) FROM finance.bank_ledger_entry l
+              JOIN selected s ON s.entity_id = l.entity_id
+              WHERE NOT l.source_deleted
+            ) AS movement_count
+        ),
+        period AS (
+          SELECT b.posting_year AS y, b.posting_month AS m
+          FROM finance.bc_gl_period_balance b
+          JOIN source.company c ON c.id = b.company_id
+          JOIN selected s ON s.entity_id = c.entity_id
+          ORDER BY b.posting_year DESC, b.posting_month DESC
+          LIMIT 1
+        ),
+        months AS (
+          SELECT b.posting_year AS y, b.posting_month AS m
+          FROM finance.bc_gl_period_balance b
+          JOIN source.company c ON c.id = b.company_id
+          JOIN selected s ON s.entity_id = c.entity_id
+          ORDER BY b.posting_year DESC, b.posting_month DESC
+          LIMIT 6
+        ),
+        recent_gl AS (
+          SELECT g.posting_date, g.document_reference, g.amount, a.account_code, a.account_name,
+                 e.name AS company_name
+          FROM finance.gl_entry g
+          JOIN selected s ON s.entity_id = g.entity_id
+          JOIN core.entity e ON e.id = g.entity_id
+          LEFT JOIN finance.account a ON a.id = g.account_id
+          WHERE NOT g.source_deleted
+          ORDER BY g.posting_date DESC, g.id DESC
+          LIMIT 8
+        ),
+        active_banks AS (
+          SELECT a.id, a.bank_name, a.account_display, a.currency_code,
+                 COUNT(*) AS entries, MAX(l.posting_date) AS last_posting_date
+          FROM finance.bank_ledger_entry l
+          JOIN selected s ON s.entity_id = l.entity_id
+          JOIN finance.bank_account a ON a.id = l.bank_account_id
+          WHERE NOT l.source_deleted
+          GROUP BY a.id, a.bank_name, a.account_display, a.currency_code
+          ORDER BY entries DESC, last_posting_date DESC NULLS LAST
+          LIMIT 6
+        ),
+        tasks AS (
+          SELECT mismatch_code, assignee_role, bank_account_id, feed_reference, detail, opened_at
+          FROM ops.bank_mismatch_task
+          WHERE status = 'OPEN'
+          ORDER BY mismatch_code, id
+          LIMIT 8
+        ),
+        library AS (
+          SELECT id, name, kind, size_bytes, created_at
+          FROM finance.repository_node
+          ORDER BY created_at DESC, sort_index, name
+          LIMIT 8
+        )
+        SELECT
+          (SELECT row_to_json(kpi) FROM kpi) AS kpi,
+          (SELECT row_to_json(period) FROM period) AS period,
+          COALESCE((SELECT json_agg(months) FROM months), '[]'::json) AS trial_months,
+          COALESCE((SELECT json_agg(recent_gl) FROM recent_gl), '[]'::json) AS recent_gl,
+          COALESCE((SELECT json_agg(active_banks) FROM active_banks), '[]'::json) AS active_banks,
+          COALESCE((SELECT json_agg(tasks) FROM tasks), '[]'::json) AS tasks,
+          COALESCE((SELECT json_agg(library) FROM library), '[]'::json) AS library
+        """,
+        (entity_code,),
+    ).fetchone()
+    kpi = board["kpi"] or {}
+    period_row = board["period"]
+    period = (int(period_row["y"]), int(period_row["m"])) if period_row else None
+    if period is None and selected and selected.get("gl_to"):
+        stamp = selected["gl_to"]
+        period = (stamp.year, stamp.month)
+    trial_months = [(int(row["y"]), int(row["m"])) for row in (board["trial_months"] or [])]
+    recent_gl = list(board["recent_gl"] or [])
+    for row in recent_gl:
+        amount = row.get("amount")
+        if amount is not None and not isinstance(amount, Decimal):
+            amount = Decimal(str(amount))
+            row["amount"] = amount
+        row["amount_text"] = money_text(amount)
+    library = list(board["library"] or [])
+    for row in library:
+        size = row.get("size_bytes")
+        if row.get("kind") != "file" or size is None:
+            row["size_label"] = None
+        elif size < 1024:
+            row["size_label"] = f"{size} B"
+        elif size < 1024 * 1024:
+            row["size_label"] = f"{size / 1024:.1f} KB"
+        else:
+            row["size_label"] = f"{size / (1024 * 1024):.1f} MB"
     tasks = []
-    for task in open_tasks(conn)[:8]:
+    for task in board["tasks"] or []:
         item = dict(task)
         item["title"] = TASK_TITLES.get(item.get("mismatch_code"), item.get("mismatch_code") or "Open item")
         tasks.append(item)
-    catalogue = report_catalogue(conn)
-    published = sum(1 for row in catalogue if row.get("catalogue_status") == "PUBLISHED")
-    entities = shell_entities(conn)
     return {
-        "totals": totals,
+        "totals": {"companies": len(companies)},
         "companies": companies[:6],
         "selected_company": selected,
         "tasks": tasks,
-        "task_count": open_task_count(conn),
-        "bank_count": entity_bank_count(conn, entity_code),
-        "movement_count": movement_count(conn, entity_code),
+        "task_count": int(kpi.get("task_count") or 0),
+        "bank_count": int((selected or {}).get("bank_accounts") or 0),
+        "movement_count": int(kpi.get("movement_count") or 0),
         "account_count": int((selected or {}).get("accounts") or 0),
         "gl_count": int((selected or {}).get("gl_entries") or 0),
-        "report_count": len(catalogue),
-        "published_report_count": published,
-        "pending_report_count": pending_report_count(conn),
-        "file_count": conn.execute(
-            "SELECT count(*) AS n FROM finance.repository_node WHERE kind = 'file'"
-        ).fetchone()["n"],
-        "library": recent_library(conn),
-        "active_banks": active_bank_accounts(conn, entity_code),
-        "recent_gl": recent_gl_lines(conn, entity_code),
-        "trial_months": loaded_months(conn, entity_code)[:8],
-        "movement_months": movement_months(conn, entity_code)[:8],
+        "report_count": int(kpi.get("report_count") or 0),
+        "published_report_count": int(kpi.get("published_report_count") or 0),
+        "pending_report_count": int(kpi.get("pending_report_count") or 0),
+        "file_count": int(kpi.get("file_count") or 0),
+        "library": library,
+        "active_banks": list(board["active_banks"] or []),
+        "recent_gl": recent_gl,
+        "trial_months": trial_months,
+        "movement_months": trial_months,
         "shell_entities": entities,
-        "shell_period": shell_period(conn, entity_code),
+        "shell_period": period,
     }
 
 
 def loaded_months(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> list[tuple[int, int]]:
     rows = conn.execute(
         """
-        SELECT y, m FROM (
-          SELECT EXTRACT(YEAR FROM e.posting_date)::int AS y, EXTRACT(MONTH FROM e.posting_date)::int AS m
-          FROM finance.gl_entry e
-          JOIN core.entity n ON n.id = e.entity_id
-          WHERE n.code = %s AND NOT e.source_deleted
-          UNION
-          SELECT b.posting_year, b.posting_month
-          FROM finance.bc_gl_period_balance b
-          JOIN source.company c ON c.id = b.company_id
-          JOIN core.entity n ON n.id = c.entity_id
-          WHERE n.code = %s
-        ) months
+        SELECT b.posting_year AS y, b.posting_month AS m
+        FROM finance.bc_gl_period_balance b
+        JOIN source.company c ON c.id = b.company_id
+        JOIN core.entity n ON n.id = c.entity_id
+        WHERE n.code = %s
         ORDER BY y DESC, m DESC
         """,
-        (entity_code, entity_code),
+        (entity_code,),
     ).fetchall()
-    return [(row["y"], row["m"]) for row in rows]
+    if rows:
+        return [(int(row["y"]), int(row["m"])) for row in rows]
+    rows = conn.execute(
+        """
+        SELECT DISTINCT EXTRACT(YEAR FROM e.posting_date)::int AS y,
+               EXTRACT(MONTH FROM e.posting_date)::int AS m
+        FROM finance.gl_entry e
+        JOIN core.entity n ON n.id = e.entity_id
+        WHERE n.code = %s AND NOT e.source_deleted
+        ORDER BY y DESC, m DESC
+        """,
+        (entity_code,),
+    ).fetchall()
+    return [(int(row["y"]), int(row["m"])) for row in rows]
 
 
 def trial_balance(conn, year: int, month: int, entity_code: str = ADVANCLY_ENTITY_CODE) -> dict:
