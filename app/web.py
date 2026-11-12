@@ -16,8 +16,9 @@ from fastapi.templating import Jinja2Templates
 from psycopg.types.json import Json
 
 from app.appraisal import default_client
-from app.constants import ADVANCLY_DIMENSION_CODES, SQL_PACK_VERSION
+from app.constants import ADVANCLY_DIMENSION_CODES, ADVANCLY_ENTITY_CODE, SQL_PACK_VERSION
 from app.db import app_connection
+from app.entity_scope import resolve_entity, set_entity_cookie
 from app.feeds import FeedClosed, MonoClient, StatementFileDrop
 from app.iam_config import CSRF_COOKIE, SESSION_COOKIE, AuthKeyRefused, require_anon_key
 from app.jwks import JwksCache
@@ -177,10 +178,18 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
 
     def page(request: Request, session: SessionView, name: str, **context):
         scopes = session.scopes
-        if "shell_entities" not in context or "shell_period" not in context:
+        entities = context.get("shell_entities")
+        active = context.get("active_entity")
+        entity_code = context.get("entity_code")
+        if entities is None or active is None or entity_code is None or "shell_period" not in context:
             with db() as conn:
-                context.setdefault("shell_entities", shell_entities(conn))
-                context.setdefault("shell_period", shell_period(conn))
+                if entities is None:
+                    entities = shell_entities(conn)
+                if active is None:
+                    active = resolve_entity(request, entities)
+                if entity_code is None:
+                    entity_code = active["code"] if active else ADVANCLY_ENTITY_CODE
+                context.setdefault("shell_period", shell_period(conn, entity_code))
         context.update(
             {
                 "request": request,
@@ -193,11 +202,22 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 "principal_name": session.display_name,
                 "sql_pack": SQL_PACK_VERSION,
                 "bc_state": current.bc_state(),
+                "shell_entities": entities or [],
+                "active_entity": active,
+                "entity_code": entity_code,
             }
         )
         response = TEMPLATES.TemplateResponse(request, name, context)
         response.headers["Cache-Control"] = "no-store"
+        if entity_code:
+            set_entity_cookie(response, entity_code, secure=cookie_is_secure(request))
         return response
+
+    def active_scope(request: Request, conn) -> tuple[list[dict], dict | None, str]:
+        entities = shell_entities(conn)
+        active = resolve_entity(request, entities)
+        code = active["code"] if active else ADVANCLY_ENTITY_CODE
+        return entities, active, code
 
     def signed_in(request: Request):
         found = resolved(request)
@@ -303,12 +323,13 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if not isinstance(session, SessionView):
             return session
         with db() as conn:
-            board = overview_board(conn)
+            entities, active, entity_code = active_scope(request, conn)
+            board = overview_board(conn, entity_code)
             totals = board.get("totals") or {}
             payload = {
                 "company_count": totals.get("companies", 0),
-                "account_count": totals.get("accounts", 0),
-                "gl_count": totals.get("gl_entries", 0),
+                "account_count": board.get("account_count", 0),
+                "gl_count": board.get("gl_count", 0),
                 "bank_count": board.get("bank_count", 0),
                 "task_count": board.get("task_count", 0),
                 "file_count": board.get("file_count", 0),
@@ -323,7 +344,9 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 "recent_gl": board.get("recent_gl") or [],
                 "trial_months": board.get("trial_months") or [],
                 "movement_months_list": board.get("movement_months") or [],
-                "shell_entities": board.get("shell_entities") or [],
+                "shell_entities": entities,
+                "active_entity": active,
+                "entity_code": entity_code,
                 "shell_period": board.get("shell_period"),
             }
         return page(request, session, "overview.html", **payload)
@@ -561,7 +584,8 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if not same(csrf_token, session.csrf):
             return RedirectResponse("/bank-accounts", status_code=303)
         with db() as conn:
-            row = conn.execute("SELECT id FROM core.entity WHERE code = 'ADVANCLY'").fetchone()
+            _entities, _active, entity_code = active_scope(request, conn)
+            row = conn.execute("SELECT id FROM core.entity WHERE code = %s", (entity_code,)).fetchone()
             if row:
                 with conn.transaction():
                     SyncService(current).refresh_tasks(conn, row["id"])
@@ -574,12 +598,14 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if not isinstance(session, SessionView):
             return session
         with db() as conn:
-            months = loaded_months(conn)
+            entities, active, entity_code = active_scope(request, conn)
+            months = loaded_months(conn, entity_code)
             if (year is None or month is None) and months:
                 year, month = months[0]
             report = None
             if year and month and 1 <= month <= 12:
-                report = trial_balance(conn, year, month)
+                report = trial_balance(conn, year, month, entity_code)
+            period = (year, month) if year and month else (months[0] if months else None)
         return page(
             request,
             session,
@@ -588,6 +614,10 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             report=report,
             year=year,
             month=month,
+            shell_entities=entities,
+            active_entity=active,
+            entity_code=entity_code,
+            shell_period=period,
         )
 
     @app.get("/trial-balance.csv")
@@ -598,8 +628,15 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         if "export" not in session.scopes:
             return JSONResponse({"status": "not permitted"}, status_code=403)
         with db() as conn:
-            report = trial_balance(conn, year, month)
-            _export(conn, session.principal_id, "trial-balance", {"year": year, "month": month}, len(report["rows"]))
+            _entities, _active, entity_code = active_scope(request, conn)
+            report = trial_balance(conn, year, month, entity_code)
+            _export(
+                conn,
+                session.principal_id,
+                "trial-balance",
+                {"entity": entity_code, "year": year, "month": month},
+                len(report["rows"]),
+            )
             conn.commit()
         return Response(_trial_csv(report), media_type="text/csv", headers={"Cache-Control": "no-store"})
 
@@ -610,7 +647,8 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             return session
         unmask = "bank:unmask" in session.scopes
         with db() as conn:
-            rows = register_rows(conn, unmask=unmask)
+            entities, active, entity_code = active_scope(request, conn)
+            rows = register_rows(conn, entity_code, unmask=unmask)
             tasks = open_tasks(conn)
             rule = dormancy_rule(conn)
         grouped = {
@@ -625,6 +663,9 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             rows=rows,
             grouped=grouped,
             rule=rule,
+            shell_entities=entities,
+            active_entity=active,
+            entity_code=entity_code,
         )
 
     @app.get("/bank-movements", response_class=HTMLResponse)
@@ -647,8 +688,9 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             chosen_year = None
             chosen_month = None
         with db() as conn:
-            accounts = movement_accounts(conn)
-            months = movement_months(conn)
+            entities, active, entity_code = active_scope(request, conn)
+            accounts = movement_accounts(conn, entity_code)
+            months = movement_months(conn, entity_code)
             query = request.query_params
             if (
                 chosen_year is None
@@ -658,7 +700,8 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
                 and "month" not in query
             ):
                 chosen_year, chosen_month = months[0]
-            report = bank_movements(conn, chosen_account, chosen_year, chosen_month)
+            report = bank_movements(conn, entity_code, chosen_account, chosen_year, chosen_month)
+            period = (chosen_year, chosen_month) if chosen_year and chosen_month else (months[0] if months else None)
         return page(
             request,
             session,
@@ -669,6 +712,10 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             account_id=chosen_account,
             year=chosen_year,
             month=chosen_month,
+            shell_entities=entities,
+            active_entity=active,
+            entity_code=entity_code,
+            shell_period=period,
         )
 
     @app.get("/bank-movements.csv")
@@ -693,12 +740,18 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             chosen_year = None
             chosen_month = None
         with db() as conn:
-            report = bank_movements(conn, chosen_account, chosen_year, chosen_month, limit=None)
+            _entities, _active, entity_code = active_scope(request, conn)
+            report = bank_movements(conn, entity_code, chosen_account, chosen_year, chosen_month, limit=None)
             _export(
                 conn,
                 session.principal_id,
                 "bank-movements",
-                {"account_id": chosen_account, "year": chosen_year, "month": chosen_month},
+                {
+                    "entity": entity_code,
+                    "account_id": chosen_account,
+                    "year": chosen_year,
+                    "month": chosen_month,
+                },
                 report["total_rows"],
             )
             conn.commit()
@@ -748,8 +801,15 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
             return JSONResponse({"status": "not permitted"}, status_code=403)
         unmask = "bank:unmask" in session.scopes
         with db() as conn:
-            rows = register_rows(conn, unmask=unmask)
-            _export(conn, session.principal_id, "bank-register", {"entity": "ADVANCLY", "unmasked": unmask}, len(rows))
+            _entities, _active, entity_code = active_scope(request, conn)
+            rows = register_rows(conn, entity_code, unmask=unmask)
+            _export(
+                conn,
+                session.principal_id,
+                "bank-register",
+                {"entity": entity_code, "unmasked": unmask},
+                len(rows),
+            )
             conn.commit()
         buffer = io.StringIO()
         writer = csv.writer(buffer)

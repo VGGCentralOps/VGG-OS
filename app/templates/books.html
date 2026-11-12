@@ -77,7 +77,10 @@
         <tbody>
           {% for row in companies %}
           <tr>
-            <td>{{ row.entity_name }}<div class="cell-sub mono">{{ row.entity_code }}</div></td>
+            <td>
+              <a class="entry" href="/books?entity={{ row.entity_code }}" data-prefetch>{{ row.entity_name }}</a>
+              <div class="cell-sub mono">{{ row.entity_code }}{% if active_entity and row.entity_code == active_entity.code %} · viewing{% endif %}</div>
+            </td>
             <td class="num">{{ n(row.accounts or 0) }}</td>
             <td class="num">{{ n(row.bank_accounts or 0) }}</td>
             <td class="num">{{ n(row.gl_entries or 0) }}</td>

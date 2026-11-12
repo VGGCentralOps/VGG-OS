@@ -10,7 +10,7 @@
     <div>
       <p class="eyebrow">Finance</p>
       <h1>Overview</h1>
-      <p class="lead">Coverage, open items, and recent activity for the loaded companies.</p>
+      <p class="lead">{% if active_entity %}Coverage and activity for {{ active_entity.name }}.{% else %}Coverage, open items, and recent activity for the selected company.{% endif %}</p>
     </div>
     <div class="page-actions">
       <a class="btn btn-secondary btn-small" href="/reports" data-prefetch>{{ icon('list') }}Reports</a>
@@ -62,7 +62,10 @@
           <tbody>
             {% for row in companies %}
             <tr>
-              <td>{{ row.entity_name }}<div class="cell-sub mono">{{ row.entity_code }}</div></td>
+              <td>
+                <a class="entry" href="/?entity={{ row.entity_code }}" data-prefetch>{{ row.entity_name }}</a>
+                <div class="cell-sub mono">{{ row.entity_code }}{% if active_entity and row.entity_code == active_entity.code %} · viewing{% endif %}</div>
+              </td>
               <td class="num">{{ n(row.accounts or 0) }}</td>
               <td class="num">{{ n(row.bank_accounts or 0) }}</td>
               <td class="num">{{ n(row.gl_entries or 0) }}</td>

@@ -67,9 +67,9 @@ def _has_bank_ledger(conn) -> bool:
     return bool(row and row["ok"])
 
 
-def register_rows(conn, unmask: bool = False) -> list[dict]:
+def register_rows(conn, entity_code: str = ADVANCLY_ENTITY_CODE, unmask: bool = False) -> list[dict]:
     statement = UNMASKED_REGISTER_SQL if unmask else REGISTER_SQL
-    rows = conn.execute(statement, (ADVANCLY_ENTITY_CODE,)).fetchall()
+    rows = conn.execute(statement, (entity_code,)).fetchall()
     activity = {}
     if _has_bank_ledger(conn):
         activity = {
@@ -93,7 +93,7 @@ def register_rows(conn, unmask: bool = False) -> list[dict]:
 MOVEMENT_LIMIT = 500
 
 
-def movement_accounts(conn) -> list[dict]:
+def movement_accounts(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> list[dict]:
     return conn.execute(
         """
         SELECT a.id, a.bank_name, a.account_display, a.currency_code
@@ -102,11 +102,11 @@ def movement_accounts(conn) -> list[dict]:
         WHERE e.code = %s
         ORDER BY a.bank_name, a.id
         """,
-        (ADVANCLY_ENTITY_CODE,),
+        (entity_code,),
     ).fetchall()
 
 
-def movement_months(conn) -> list[tuple[int, int]]:
+def movement_months(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> list[tuple[int, int]]:
     if not _has_bank_ledger(conn):
         return []
     rows = conn.execute(
@@ -117,14 +117,19 @@ def movement_months(conn) -> list[tuple[int, int]]:
         WHERE e.code = %s AND NOT l.source_deleted
         ORDER BY y DESC, m DESC
         """,
-        (ADVANCLY_ENTITY_CODE,),
+        (entity_code,),
     ).fetchall()
     return [(row["y"], row["m"]) for row in rows]
 
 
-def _movement_filter(account_id: int | None, year: int | None, month: int | None) -> tuple[str, list]:
+def _movement_filter(
+    entity_code: str,
+    account_id: int | None,
+    year: int | None,
+    month: int | None,
+) -> tuple[str, list]:
     clauses = ["e.code = %s", "NOT l.source_deleted"]
-    params: list = [ADVANCLY_ENTITY_CODE]
+    params: list = [entity_code]
     if account_id is not None:
         clauses.append("l.bank_account_id = %s")
         params.append(account_id)
@@ -135,10 +140,17 @@ def _movement_filter(account_id: int | None, year: int | None, month: int | None
     return " AND ".join(clauses), params
 
 
-def bank_movements(conn, account_id: int | None, year: int | None, month: int | None, limit: int | None = MOVEMENT_LIMIT) -> dict:
+def bank_movements(
+    conn,
+    entity_code: str,
+    account_id: int | None,
+    year: int | None,
+    month: int | None,
+    limit: int | None = MOVEMENT_LIMIT,
+) -> dict:
     if not _has_bank_ledger(conn):
         return {"rows": [], "summary": [], "total_rows": 0, "truncated": False}
-    where, params = _movement_filter(account_id, year, month)
+    where, params = _movement_filter(entity_code, account_id, year, month)
     total = conn.execute(
         f"""
         SELECT COUNT(*) AS n
@@ -201,10 +213,18 @@ def bank_movements(conn, account_id: int | None, year: int | None, month: int | 
     return {"rows": rows, "summary": summary, "total_rows": int(total), "truncated": limit is not None and total > len(rows)}
 
 
-def movement_count(conn) -> int:
+def movement_count(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> int:
     if not _has_bank_ledger(conn):
         return 0
-    row = conn.execute("SELECT COUNT(*) AS n FROM finance.bank_ledger_entry WHERE NOT source_deleted").fetchone()
+    row = conn.execute(
+        """
+        SELECT COUNT(*) AS n
+        FROM finance.bank_ledger_entry l
+        JOIN core.entity e ON e.id = l.entity_id
+        WHERE e.code = %s AND NOT l.source_deleted
+        """,
+        (entity_code,),
+    ).fetchone()
     return int(row["n"])
 
 
@@ -298,7 +318,16 @@ def report_catalogue(conn) -> list[dict]:
 def shell_entities(conn) -> list[dict]:
     return conn.execute(
         """
-        SELECT e.code, e.name
+        SELECT e.code,
+               e.name,
+               EXISTS (
+                 SELECT 1 FROM finance.gl_entry g
+                 WHERE g.entity_id = e.id AND NOT g.source_deleted
+               ) AS has_gl,
+               EXISTS (
+                 SELECT 1 FROM finance.bank_account a
+                 WHERE a.entity_id = e.id
+               ) AS has_banks
         FROM core.entity e
         JOIN source.company c ON c.entity_id = e.id
         ORDER BY e.name
@@ -306,12 +335,12 @@ def shell_entities(conn) -> list[dict]:
     ).fetchall()
 
 
-def shell_period(conn) -> tuple[int, int] | None:
-    months = loaded_months(conn)
+def shell_period(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> tuple[int, int] | None:
+    months = loaded_months(conn, entity_code)
     return months[0] if months else None
 
 
-def advancly_bank_count(conn) -> int:
+def entity_bank_count(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> int:
     row = conn.execute(
         """
         SELECT COUNT(*) AS n
@@ -319,9 +348,13 @@ def advancly_bank_count(conn) -> int:
         JOIN core.entity e ON e.id = a.entity_id
         WHERE e.code = %s
         """,
-        (ADVANCLY_ENTITY_CODE,),
+        (entity_code,),
     ).fetchone()
     return int(row["n"])
+
+
+def advancly_bank_count(conn) -> int:
+    return entity_bank_count(conn, ADVANCLY_ENTITY_CODE)
 
 
 def open_task_count(conn) -> int:
@@ -361,7 +394,7 @@ def recent_library(conn, limit: int = 8) -> list[dict]:
     return rows
 
 
-def active_bank_accounts(conn, limit: int = 6) -> list[dict]:
+def active_bank_accounts(conn, entity_code: str = ADVANCLY_ENTITY_CODE, limit: int = 6) -> list[dict]:
     if not _has_bank_ledger(conn):
         return []
     return conn.execute(
@@ -376,32 +409,33 @@ def active_bank_accounts(conn, limit: int = 6) -> list[dict]:
         ORDER BY entries DESC, last_posting_date DESC NULLS LAST
         LIMIT %s
         """,
-        (ADVANCLY_ENTITY_CODE, limit),
+        (entity_code, limit),
     ).fetchall()
 
 
-def recent_gl_lines(conn, limit: int = 8) -> list[dict]:
+def recent_gl_lines(conn, entity_code: str = ADVANCLY_ENTITY_CODE, limit: int = 8) -> list[dict]:
     rows = conn.execute(
         """
         SELECT e.name AS company_name, g.posting_date, g.document_reference, g.amount, a.account_code, a.account_name
         FROM finance.gl_entry g
         JOIN core.entity e ON e.id = g.entity_id
         LEFT JOIN finance.account a ON a.id = g.account_id
-        WHERE NOT g.source_deleted
+        WHERE e.code = %s AND NOT g.source_deleted
         ORDER BY g.posting_date DESC, g.id DESC
         LIMIT %s
         """,
-        (limit,),
+        (entity_code, limit),
     ).fetchall()
     for row in rows:
         row["amount_text"] = money_text(row["amount"])
     return rows
 
 
-def overview_board(conn) -> dict:
+def overview_board(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> dict:
     inventory = books_inventory(conn)
     totals = inventory.get("totals") or {}
     companies = inventory.get("companies") or []
+    selected = next((row for row in companies if row.get("entity_code") == entity_code), None)
     tasks = []
     for task in open_tasks(conn)[:8]:
         item = dict(task)
@@ -409,13 +443,17 @@ def overview_board(conn) -> dict:
         tasks.append(item)
     catalogue = report_catalogue(conn)
     published = sum(1 for row in catalogue if row.get("catalogue_status") == "PUBLISHED")
+    entities = shell_entities(conn)
     return {
         "totals": totals,
         "companies": companies[:6],
+        "selected_company": selected,
         "tasks": tasks,
         "task_count": open_task_count(conn),
-        "bank_count": advancly_bank_count(conn),
-        "movement_count": movement_count(conn),
+        "bank_count": entity_bank_count(conn, entity_code),
+        "movement_count": movement_count(conn, entity_code),
+        "account_count": int((selected or {}).get("accounts") or 0),
+        "gl_count": int((selected or {}).get("gl_entries") or 0),
         "report_count": len(catalogue),
         "published_report_count": published,
         "pending_report_count": pending_report_count(conn),
@@ -423,16 +461,16 @@ def overview_board(conn) -> dict:
             "SELECT count(*) AS n FROM finance.repository_node WHERE kind = 'file'"
         ).fetchone()["n"],
         "library": recent_library(conn),
-        "active_banks": active_bank_accounts(conn),
-        "recent_gl": recent_gl_lines(conn),
-        "trial_months": loaded_months(conn)[:8],
-        "movement_months": movement_months(conn)[:8],
-        "shell_entities": shell_entities(conn),
-        "shell_period": shell_period(conn),
+        "active_banks": active_bank_accounts(conn, entity_code),
+        "recent_gl": recent_gl_lines(conn, entity_code),
+        "trial_months": loaded_months(conn, entity_code)[:8],
+        "movement_months": movement_months(conn, entity_code)[:8],
+        "shell_entities": entities,
+        "shell_period": shell_period(conn, entity_code),
     }
 
 
-def loaded_months(conn) -> list[tuple[int, int]]:
+def loaded_months(conn, entity_code: str = ADVANCLY_ENTITY_CODE) -> list[tuple[int, int]]:
     rows = conn.execute(
         """
         SELECT y, m FROM (
@@ -449,12 +487,12 @@ def loaded_months(conn) -> list[tuple[int, int]]:
         ) months
         ORDER BY y DESC, m DESC
         """,
-        (ADVANCLY_ENTITY_CODE, ADVANCLY_ENTITY_CODE),
+        (entity_code, entity_code),
     ).fetchall()
     return [(row["y"], row["m"]) for row in rows]
 
 
-def trial_balance(conn, year: int, month: int) -> dict:
+def trial_balance(conn, year: int, month: int, entity_code: str = ADVANCLY_ENTITY_CODE) -> dict:
     start = date(year, month, 1)
     end = date(year, month, monthrange(year, month)[1])
     local = {}
@@ -469,7 +507,7 @@ def trial_balance(conn, year: int, month: int) -> dict:
         WHERE n.code = %s AND e.posting_date BETWEEN %s AND %s AND NOT e.source_deleted
         GROUP BY a.account_code, a.account_name, a.account_type
         """,
-        (ADVANCLY_ENTITY_CODE, start, end),
+        (entity_code, start, end),
     ).fetchall():
         local[row["account_code"]] = {
             "name": row["account_name"],
@@ -488,7 +526,7 @@ def trial_balance(conn, year: int, month: int) -> dict:
         JOIN core.entity n ON n.id = c.entity_id
         WHERE n.code = %s AND b.posting_year = %s AND b.posting_month = %s
         """,
-        (ADVANCLY_ENTITY_CODE, year, month),
+        (entity_code, year, month),
     ).fetchall():
         control[row["gl_account_number"]] = {
             "amount": row["amount"],
@@ -512,7 +550,7 @@ def trial_balance(conn, year: int, month: int) -> dict:
         HAVING SUM(e.amount) <> 0
         ORDER BY e.transaction_number
         """,
-        (ADVANCLY_ENTITY_CODE, start, end),
+        (entity_code, start, end),
     ).fetchall()
     problems = conn.execute(
         """
@@ -527,7 +565,7 @@ def trial_balance(conn, year: int, month: int) -> dict:
         ORDER BY v.id DESC
         LIMIT 200
         """,
-        (ADVANCLY_ENTITY_CODE,),
+        (entity_code,),
     ).fetchall()
     local_sum = None
     if local:
