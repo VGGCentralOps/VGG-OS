@@ -825,14 +825,35 @@ def create_app(settings: Settings | None = None, appraisal=None, jwks=None, limi
         writer = csv.writer(buffer)
         number_column = "account_number" if unmask else "masked_account_number"
         writer.writerow(
-            ["owning_entity", number_column, "currency", "name", "business_central_account_id",
-             "accountable_owner", "data_route", "link_status", "in_latest_business_central_list", "blocked"]
+            [
+                "owning_entity",
+                number_column,
+                "currency",
+                "name",
+                "bc_book_balance",
+                "bc_book_balance_lcy",
+                "business_central_account_id",
+                "accountable_owner",
+                "data_route",
+                "link_status",
+                "in_latest_business_central_list",
+                "blocked",
+            ]
         )
         for row in rows:
             writer.writerow([
-                row["entity_name"], row["account_display"], row["currency_code"], row["bank_name"],
-                row["bc_account_id"], row["accountable_owner"] or "", row["data_route"], row["link_status"],
-                "yes" if row["in_latest_bc_list"] else "no", "yes" if not row["active"] else "no",
+                row["entity_name"],
+                row["account_display"],
+                row["currency_code"],
+                row["bank_name"],
+                "" if row.get("book_balance") is None else format(row["book_balance"], "f"),
+                "" if row.get("book_balance_lcy") is None else format(row["book_balance_lcy"], "f"),
+                row["bc_account_id"],
+                row["accountable_owner"] or "",
+                row["data_route"],
+                row["link_status"],
+                "yes" if row["in_latest_bc_list"] else "no",
+                "yes" if not row["active"] else "no",
             ])
         return Response(buffer.getvalue(), media_type="text/csv", headers={"Cache-Control": "no-store"})
 

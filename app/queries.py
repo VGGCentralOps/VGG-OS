@@ -22,10 +22,24 @@ SELECT a.id AS bank_account_id,
        g.accountable_owner,
        g.data_route,
        g.link_status,
-       g.in_latest_bc_list
+       g.in_latest_bc_list,
+       CASE
+         WHEN NULLIF(BTRIM(m.payload->>'balance'), '') IS NULL THEN NULL
+         ELSE (m.payload->>'balance')::numeric
+       END AS book_balance,
+       CASE
+         WHEN NULLIF(BTRIM(m.payload->>'balanceLCY'), '') IS NULL THEN NULL
+         ELSE (m.payload->>'balanceLCY')::numeric
+       END AS book_balance_lcy
 FROM finance.bank_account a
 JOIN core.entity e ON e.id = a.entity_id
 JOIN finance.bank_account_governance g ON g.bank_account_id = a.id
+LEFT JOIN finance.bank_book_mapping map ON map.bank_account_id = a.id
+LEFT JOIN finance.bc_master_record m
+  ON m.company_id = map.company_id
+ AND m.entity_set = 'bankAccounts'
+ AND NOT m.source_deleted
+ AND m.record_id = g.bc_account_id
 WHERE e.code = %s
 ORDER BY a.bank_name, g.bc_account_id
 """
@@ -41,11 +55,25 @@ SELECT a.id AS bank_account_id,
        g.accountable_owner,
        g.data_route,
        g.link_status,
-       g.in_latest_bc_list
+       g.in_latest_bc_list,
+       CASE
+         WHEN NULLIF(BTRIM(m.payload->>'balance'), '') IS NULL THEN NULL
+         ELSE (m.payload->>'balance')::numeric
+       END AS book_balance,
+       CASE
+         WHEN NULLIF(BTRIM(m.payload->>'balanceLCY'), '') IS NULL THEN NULL
+         ELSE (m.payload->>'balanceLCY')::numeric
+       END AS book_balance_lcy
 FROM finance.bank_account a
 JOIN core.entity e ON e.id = a.entity_id
 JOIN finance.bank_account_governance g ON g.bank_account_id = a.id
 LEFT JOIN finance.bank_account_secret sec ON sec.bank_account_id = a.id
+LEFT JOIN finance.bank_book_mapping map ON map.bank_account_id = a.id
+LEFT JOIN finance.bc_master_record m
+  ON m.company_id = map.company_id
+ AND m.entity_set = 'bankAccounts'
+ AND NOT m.source_deleted
+ AND m.record_id = g.bc_account_id
 WHERE e.code = %s
 ORDER BY a.bank_name, g.bc_account_id
 """
@@ -88,6 +116,16 @@ def register_rows(conn, entity_code: str = ADVANCLY_ENTITY_CODE, unmask: bool = 
         found = activity.get(row["bank_account_id"])
         row["entries"] = int(found["entries"]) if found else 0
         row["last_posting_date"] = found["last_posting_date"] if found else None
+        balance = row.get("book_balance")
+        if balance is not None and not isinstance(balance, Decimal):
+            balance = Decimal(str(balance))
+            row["book_balance"] = balance
+        row["book_balance_text"] = money_text(balance)
+        balance_lcy = row.get("book_balance_lcy")
+        if balance_lcy is not None and not isinstance(balance_lcy, Decimal):
+            balance_lcy = Decimal(str(balance_lcy))
+            row["book_balance_lcy"] = balance_lcy
+        row["book_balance_lcy_text"] = money_text(balance_lcy)
     return rows
 
 

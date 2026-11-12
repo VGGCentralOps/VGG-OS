@@ -13,7 +13,7 @@
   <div>
     <p class="eyebrow">Banks</p>
     <h1>Bank accounts</h1>
-    <p class="lead">Register, ownership, and ledger activity.</p>
+    <p class="lead">Register, Business Central book balance, and ledger activity.</p>
   </div>
   <div class="page-actions">
     <a class="btn btn-secondary" href="/bank-movements" data-prefetch>{{ icon('movements') }}Movements</a>
@@ -38,7 +38,7 @@
 
 <section class="card">
   <div class="card-head">
-    <div class="card-title">{{ icon('bank') }}<div><h2>Register</h2><p class="meta">Entries and last posting date</p></div></div>
+    <div class="card-title">{{ icon('bank') }}<div><h2>Register</h2><p class="meta">BC book balance, entries, and last posting date</p></div></div>
     <form method="post" action="/bank-accounts/check">
       <input type="hidden" name="csrf_token" value="{{ csrf }}">
       <button type="submit" class="btn btn-secondary btn-small">Run daily check</button>
@@ -49,7 +49,8 @@
     <table class="data">
       <thead>
         <tr>
-          <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th><th>External id</th>
+          <th>Owning entity</th><th>Account</th><th>Name</th><th>Currency</th>
+          <th class="num">BC balance</th><th>External id</th>
           <th>Owner</th><th>Route</th><th>Link</th><th class="num">Entries</th><th>Last posted</th><th>Status</th>
         </tr>
       </thead>
@@ -60,6 +61,7 @@
           <td class="mono">{{ row.account_display }}</td>
           <td>{{ row.bank_name }}</td>
           <td class="mono">{{ row.currency_code }}</td>
+          <td class="num tabular">{{ row.book_balance_text }}</td>
           <td class="mono small">{{ row.bc_account_id }}</td>
           <td class="muted">{{ row.accountable_owner or "—" }}</td>
           <td>{{ chip('ready', row.data_route) }}</td>
