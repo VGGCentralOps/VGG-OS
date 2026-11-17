@@ -687,7 +687,7 @@ def overview_board(conn, entity_code: str = ADVANCLY_ENTITY_CODE, entities: list
         tasks.append(item)
     return {
         "totals": {"companies": len(companies)},
-        "companies": companies[:6],
+        "companies": companies,
         "selected_company": selected,
         "tasks": tasks,
         "task_count": int(kpi.get("task_count") or 0),
