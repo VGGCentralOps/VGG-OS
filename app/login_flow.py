@@ -162,16 +162,28 @@ def establish_session(request: Request, email: str, password: str, csrf_token: s
         return LoginResult(401, GENERIC)
 
     if settings.temp_db_login:
-        try:
-            with db() as conn:
-                temporary = open_temp_session(conn, settings, typed, password)
-                if temporary is not None:
-                    conn.commit()
-                    return temporary
-        except (psycopg.errors.UndefinedTable, psycopg.errors.InsufficientPrivilege):
-            log.info("Temporary database sign-in is not installed.")
-        except Exception as exc:
-            log.warning("Temporary database sign-in could not be checked (%s).", type(exc).__name__)
+        last_error = None
+        for attempt in range(2):
+            try:
+                with db() as conn:
+                    temporary = open_temp_session(conn, settings, typed, password)
+                    if temporary is not None:
+                        conn.commit()
+                        return temporary
+                last_error = None
+                break
+            except (psycopg.errors.UndefinedTable, psycopg.errors.InsufficientPrivilege):
+                log.info("Temporary database sign-in is not installed.")
+                last_error = None
+                break
+            except Exception as exc:
+                last_error = exc
+                log.warning(
+                    "Temporary database sign-in could not be checked (%s)%s.",
+                    type(exc).__name__,
+                    " · retrying" if attempt == 0 else "",
+                )
+        if last_error is not None:
             return LoginResult(503, UNAVAILABLE)
 
     if not settings.appraisal_login:

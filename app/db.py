@@ -37,19 +37,30 @@ class Pool:
         conn.close()
 
     def take(self):
-        with self._lock:
-            while self._idle:
-                conn = self._idle.pop()
-                if not conn.closed:
-                    return conn
-                self._count = max(0, self._count - 1)
-            self._count += 1
-        try:
-            return connect(self.url)
-        except Exception:
+        while True:
             with self._lock:
-                self._count = max(0, self._count - 1)
-            raise
+                while self._idle:
+                    conn = self._idle.pop()
+                    if conn.closed:
+                        self._count = max(0, self._count - 1)
+                        continue
+                    # Remote/pooler connections go idle-dead; probe before reuse.
+                    try:
+                        conn.execute("SELECT 1")
+                        return conn
+                    except Exception:
+                        try:
+                            conn.close()
+                        except Exception:
+                            pass
+                        self._count = max(0, self._count - 1)
+                self._count += 1
+            try:
+                return connect(self.url)
+            except Exception:
+                with self._lock:
+                    self._count = max(0, self._count - 1)
+                raise
 
     def connection(self):
         return _Lease(self)
